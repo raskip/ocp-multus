@@ -14,6 +14,54 @@ The default is `x86_64` because that is the most widely tested CPU
 architecture for OpenShift on Azure and matches Red Hat's published
 sizing guidance.
 
+## Host CPU vs cluster CPU (they are independent)
+
+> **TL;DR — the laptop you run `make` on does *not* dictate the cluster
+> CPU.** The cluster's CPU is set exclusively by `ARCHITECTURE` in
+> `config/cluster.env`. The host's CPU only decides which
+> `openshift-install` and `oc` *binaries* you download.
+
+This repo's installer/automation is a thin orchestration layer:
+`make` calls `terraform` + `az` + `openshift-install`, all of which
+talk to Azure to provision VMs and stream RHCOS. There is no
+node-architecture coupling between the host running `make` and the
+cluster being built. An Apple-silicon Mac (arm64) can deploy an
+**x86_64 Azure cluster**, and a Linux/x86_64 jump-host can deploy an
+**arm64 Azure cluster**. Mix freely.
+
+The only thing your host arch affects is the tarball you download
+from `mirror.openshift.com`:
+
+| Host OS | Host CPU (`uname -s` / `uname -m`) | `openshift-install` tarball | `oc` tarball |
+|---|---|---|---|
+| Linux | `Linux` / `x86_64` | `openshift-install-linux.tar.gz` | `openshift-client-linux.tar.gz` |
+| Linux | `Linux` / `aarch64` | `openshift-install-linux-arm64.tar.gz` | `openshift-client-linux-arm64.tar.gz` |
+| macOS | `Darwin` / `x86_64` | `openshift-install-mac.tar.gz` | `openshift-client-mac.tar.gz` |
+| macOS (Apple silicon) | `Darwin` / `arm64` | `openshift-install-mac-arm64.tar.gz` | `openshift-client-mac-arm64.tar.gz` |
+| Windows | `MINGW*` / `MSYS*` | _not available — use WSL2 or Cloud Shell_ | `openshift-client-windows.zip` (oc only) |
+
+All four POSIX tarballs live under
+`https://mirror.openshift.com/pub/openshift-v4/clients/ocp/<channel>/`,
+where `<channel>` is typically `stable-4.18` (matching this repo's
+defaults).
+
+To grab the right pair automatically, run:
+
+```bash
+make tools                                # downloads both ./openshift-install + ./oc
+OCP_VERSION=stable-4.19 make tools        # pick a different channel
+bash scripts/fetch-openshift-tools.sh --force   # re-download even if present
+```
+
+The helper detects the host with `uname` and downloads the matching
+tarballs. See [README.md → Where to run the installer](./README.md#where-to-run-the-installer)
+for the full list of supported host environments.
+
+> Windows note: there is **no** native-Windows `openshift-install`
+> binary upstream. Use WSL2, Azure Cloud Shell, a Linux dev container,
+> a GitHub Codespace, or any Linux/macOS host. The Makefile here uses
+> `/bin/bash`.
+
 ## What the setting controls
 
 | `ARCHITECTURE` (cluster.env) | install-config `architecture` | RHCOS stream key | Azure SIG `architecture` | Uploader Ubuntu SKU | Master / SR-IOV VM | Worker / bootstrap VM | Uploader VM |

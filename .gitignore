@@ -1,9 +1,15 @@
-# Large binaries (downloaded separately)
+# Large binaries (downloaded separately, e.g. via `make tools`)
 openshift-install
 oc
 kubectl
 openshift-install-linux.tar.gz
+openshift-install-linux-arm64.tar.gz
+openshift-install-mac.tar.gz
+openshift-install-mac-arm64.tar.gz
 openshift-client-linux.tar.gz
+openshift-client-linux-arm64.tar.gz
+openshift-client-mac.tar.gz
+openshift-client-mac-arm64.tar.gz
 
 # Secrets
 secrets/

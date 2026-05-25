@@ -10,7 +10,7 @@ The Terraform stages are intentionally separate so you can inspect and troublesh
 - Azure subscription access for the public parent DNS zone.
 - Existing VNet with enough free address space for the OpenShift subnets.
 - Existing `privatelink.blob.core.windows.net` private DNS zone reachable from the cluster VNet, or an equivalent private DNS design.
-- Azure CLI, Terraform, `jq`, `make`, `perl`, `openshift-install`, and `oc`.
+- Azure CLI, Terraform, `jq`, `make`, `perl`, `bash`, `openshift-install`, and `oc`. The cluster's CPU architecture is independent of the host that runs this installer — see [README → Where to run the installer](README.md#where-to-run-the-installer) for supported host environments and [CPU-ARCHITECTURE.md → Host CPU vs cluster CPU](CPU-ARCHITECTURE.md#host-cpu-vs-cluster-cpu-they-are-independent) for the host-vs-cluster matrix. Use `make tools` to download matching `openshift-install` + `oc` binaries.
 - Red Hat pull secret.
 - SSH keypair for RHCOS and helper VMs.
 - x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [CPU-ARCHITECTURE.md](CPU-ARCHITECTURE.md).

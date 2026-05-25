@@ -43,9 +43,53 @@ Gallery image, the uploader VM, and the default VM sizes. See
 [CPU-ARCHITECTURE.md](./CPU-ARCHITECTURE.md) for the full mapping and override
 options.
 
+## Where to run the installer
+
+The installer is a Bash + Terraform + Azure CLI pipeline. It runs anywhere
+that has those tools and Azure auth — your laptop's CPU does **not** dictate
+the cluster's CPU (see [CPU-ARCHITECTURE.md → Host CPU vs cluster CPU](./CPU-ARCHITECTURE.md#host-cpu-vs-cluster-cpu-they-are-independent)).
+
+Supported host environments:
+
+- Linux x86_64 or arm64 (Ubuntu, Debian, RHEL, Fedora, …)
+- macOS Intel (x86_64) or Apple silicon (arm64)
+- Windows under **WSL2** (Ubuntu/Debian recommended) — native Windows is
+  not supported because there is no `openshift-install-windows` upstream
+- Azure Cloud Shell (bash) — has `az`, `jq`, `make`, `perl`, `terraform`
+  preinstalled. Caveats: 5 GB persistent storage quota, idle session
+  timeout (~20 min), source IP is from Azure's Cloud Shell pool (not from
+  your network), so don't rely on it for long unattended runs or
+  IP-allowlist scenarios. Fine for short interactive sessions.
+- A Linux dev container or GitHub Codespace
+- A Linux jump-VM (e.g. a small Azure VM with public outbound egress) —
+  recommended for long unattended runs
+- A GitHub Actions Linux runner for fully automated runs
+
+Required tools on the host:
+
+- Azure CLI (`az`) and a working `az login`
+- Terraform ≥ 1.5
+- `bash`, `jq`, `make`, `perl`, `curl`, `tar` (`curl`/`tar` are only
+  needed by `make tools`)
+- `openshift-install` and `oc` matching the host OS + CPU
+
+To fetch `openshift-install` and `oc` automatically:
+
+```bash
+make tools                               # autodetects host OS+CPU
+OCP_VERSION=stable-4.19 make tools       # override channel/version
+bash scripts/fetch-openshift-tools.sh --force   # re-download
+```
+
+The helper (`scripts/fetch-openshift-tools.sh`) downloads from
+`mirror.openshift.com` and places the binaries at the repo root. The
+default channel is `stable-4.18`. See
+[CPU-ARCHITECTURE.md → Host CPU vs cluster CPU](./CPU-ARCHITECTURE.md#host-cpu-vs-cluster-cpu-they-are-independent)
+for the per-host tarball matrix.
+
 ## Quick start
 
-1. Install tools: Azure CLI, Terraform, `jq`, `make`, `perl`, `openshift-install`, and `oc`.
+1. Install host tools: Azure CLI, Terraform, `jq`, `make`, `perl`, `bash` (and `git`). See [Where to run the installer](#where-to-run-the-installer) for supported environments and `make tools` to download `openshift-install` and `oc`.
 2. Copy and edit configuration:
 
    ```bash

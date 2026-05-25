@@ -8,7 +8,7 @@ OC        := $(CURDIR)/oc
 INSTALL_DIR := $(CURDIR)/install
 
 .PHONY: help verify prereqs network upload-rhcos image install-config ignition \
-        tfvars \
+        tfvars tools \
         upload-ignition bootstrap control-plane destroy-bootstrap workers \
         destroy-workers destroy-control-plane destroy-image destroy-network \
         destroy-prereqs destroy clean-install \
@@ -17,6 +17,12 @@ INSTALL_DIR := $(CURDIR)/install
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
+
+# Download matching openshift-install + oc for the current host (autodetected
+# with uname). Override via OCP_VERSION (default: stable-4.18). Independent of
+# the cluster's CPU architecture (see CPU-ARCHITECTURE.md).
+tools:
+	@bash scripts/fetch-openshift-tools.sh
 
 verify:
 	@$(INSTALLER) version
