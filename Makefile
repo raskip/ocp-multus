@@ -10,7 +10,9 @@ INSTALL_DIR := $(CURDIR)/install
 .PHONY: help verify prereqs network upload-rhcos image install-config ignition \
         upload-ignition bootstrap control-plane destroy-bootstrap workers \
         destroy-workers destroy-control-plane destroy-image destroy-network \
-        destroy-prereqs destroy clean-install
+        destroy-prereqs destroy clean-install \
+        etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
+        workers-down workers-up cluster-status
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
@@ -59,3 +61,12 @@ ignition: install-config
 
 clean-install:
 	@rm -rf $(INSTALL_DIR)
+
+# ---- Day-2 cluster lifecycle (see OPERATIONS.md) ----
+etcd-backup:        ; bash scripts/cluster-etcd-backup.sh
+cluster-shutdown:   ; bash scripts/cluster-shutdown.sh
+cluster-shutdown-fast: ; bash scripts/cluster-shutdown.sh --fast
+cluster-startup:    ; bash scripts/cluster-startup.sh
+workers-down:       ; bash scripts/cluster-scale-workers.sh down
+workers-up:         ; bash scripts/cluster-scale-workers.sh up
+cluster-status:     ; bash scripts/cluster-status.sh

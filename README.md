@@ -66,6 +66,22 @@ The default topology is internal: `publish: Internal`.
 
 5. Follow the full runbook in [`DEMO.md`](./DEMO.md).
 
+## Day-2 lifecycle (stop and restart the cluster)
+
+The cluster can be safely stopped to save Azure compute cost and brought back
+later. Just deallocating VMs in Azure is not safe on its own — etcd needs an
+in-OS graceful shutdown first. See the dedicated runbook [`OPERATIONS.md`](./OPERATIONS.md)
+for details. Common operations:
+
+```bash
+make cluster-status        # show VM power state, nodes, operators, etcd, cert expiry
+make etcd-backup           # snapshot etcd on a control plane node
+make cluster-shutdown      # graceful: drain, in-OS shutdown, then Azure deallocate
+make cluster-startup       # start VMs, auto-approve CSRs, uncordon, wait Ready
+make workers-down          # cheaper option: stop only workers, keep API + etcd up
+make workers-up
+```
+
 ## Important notes
 
 - This is UPI infrastructure; it is expected that you understand and own the Azure networking and DNS prerequisites.

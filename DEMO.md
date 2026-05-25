@@ -151,3 +151,17 @@ make clean-install
 ```
 
 `make destroy` runs the same sequence.
+
+## Pausing and restarting the cluster
+
+You don't have to destroy the cluster to save Azure compute. The day-2
+runbook in [`OPERATIONS.md`](./OPERATIONS.md) covers:
+
+- `make etcd-backup` — snapshot etcd before any risky operation.
+- `make cluster-shutdown` — Red Hat graceful shutdown then `az vm deallocate`.
+- `make cluster-startup` — boot, auto-approve kubelet CSRs, uncordon, wait healthy.
+- `make workers-down` / `make workers-up` — keep the control plane up and pause workers only.
+
+The cluster can stay deallocated for up to ~1 year before the internal
+kube-apiserver-to-kubelet signer expires and manual CSR recovery is required.
+Always take an etcd backup before stopping.

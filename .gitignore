@@ -48,3 +48,8 @@ override.tf.json
 config/cluster.env
 *.swp
 *.bak
+
+# Cluster lifecycle backups (etcd snapshots, recovery bundles)
+backups/*
+!backups/
+!backups/.gitkeep
