@@ -6,7 +6,13 @@ automatically before working hours.
 
 Read [`OPERATIONS.md`](./OPERATIONS.md) first for what each command
 does and the safety model. This document focuses on *how to schedule
-them*.
+them* via **GitHub Actions, host cron, or systemd timers**.
+
+> **Looking for Azure-native automation?** See
+> [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md) for Azure Container
+> Apps Jobs, Azure Automation + Linux Hybrid Worker, Azure Functions,
+> and Azure DevOps Pipelines — including a decision matrix and a
+> "don't use these" list.
 
 > **Discipline for any scheduled run**
 >
@@ -494,3 +500,22 @@ After the first real scheduled run, audit:
 
 If any of those fail, fix the root cause before letting the schedule
 loose unattended.
+
+---
+
+## Alternative: Azure-native automation
+
+If you'd rather not run GitHub Actions, host cron, or a systemd
+timer — for example, your organization standardizes on Azure ops
+tooling — there are good Azure-native alternatives covered in their
+own document:
+
+- **Azure Container Apps Jobs** (recommended default for the
+  Azure-native path)
+- **Azure Automation + Linux Hybrid Worker**
+- Azure Functions and Azure DevOps Pipelines (at-a-glance)
+- Plus a "don't use these" list for AKS CronJob / Batch / Logic Apps
+  on their own / Azure Scheduler / Azure Update Manager
+
+See [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md) for the decision
+matrix and full walkthroughs.

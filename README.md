@@ -85,6 +85,7 @@ Documentation:
 
 - [`OPERATIONS.md`](./OPERATIONS.md) — full operating runbook (when to use which, cost model, prerequisites, troubleshooting, end-to-end walkthrough).
 - [`SCHEDULING.md`](./SCHEDULING.md) — scheduled automation: GitHub Actions, Linux cron, systemd timers.
+- [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md) — Azure-native scheduling alternatives: Container Apps Jobs, Azure Automation + Hybrid Worker, Functions, ADO Pipelines.
 - [`docs/scripts/`](./docs/scripts/) — per-script CLI reference (synopsis, flags, examples, exit codes).
 
 

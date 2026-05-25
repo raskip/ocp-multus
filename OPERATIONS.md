@@ -438,6 +438,12 @@ For unattended scheduled runs (overnight shutdown, morning startup) see
 - Linux/macOS `cron` with a wrapper script that handles locking and logging.
 - `systemd` timer + service unit examples.
 
+If you can't use GitHub Actions (org policy, no GitHub access, Azure-only
+control plane), see [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md) for
+Azure-native alternatives: Container Apps Jobs (recommended default),
+Azure Automation + Linux Hybrid Worker, plus Functions and Azure DevOps
+Pipelines at a glance.
+
 ## Out of scope
 
 - Restoring etcd from backup (do this manually with Red Hat's documented procedure).

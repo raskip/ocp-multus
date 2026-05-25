@@ -164,6 +164,9 @@ runbook in [`OPERATIONS.md`](./OPERATIONS.md) covers:
 
 For unattended scheduled runs (overnight shutdown / morning startup via
 GitHub Actions, Linux cron, or systemd timers) see [`SCHEDULING.md`](./SCHEDULING.md).
+For Azure-native alternatives when GitHub Actions isn't an option (Azure
+Container Apps Jobs, Azure Automation + Linux Hybrid Worker, Functions,
+Azure DevOps Pipelines) see [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md).
 For the full CLI reference of every lifecycle script see
 [`docs/scripts/`](./docs/scripts/).
 
