@@ -33,6 +33,29 @@ them* via **GitHub Actions, host cron, or systemd timers**.
 
 ---
 
+## Which option should I pick?
+
+This guide documents three host-side options (GitHub Actions, host cron,
+systemd timers) and [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md) covers
+four Azure-native ones (Container Apps Jobs, Automation + Hybrid Worker,
+Functions, Azure DevOps Pipelines). Picking the right one is mostly a
+question of *who runs it* and *what's allowed*:
+
+| Situation | Pick | Why |
+|---|---|---|
+| **Team owns the cluster, GitHub access is fine, you want the simplest path** | **GitHub Actions** ([Option A](#option-a-github-actions-recommended-for-teams)) | OIDC = no long-lived secrets to rotate. `workflow_dispatch` gives a built-in manual override. `concurrency:` groups give a real singleton lock so shutdown and startup never race. Per-run cost is effectively zero for a 2-runs/day workload. |
+| **Org policy forbids GitHub Actions; everything must stay Azure-native** | **Azure Container Apps Jobs** ([`AZURE-AUTOMATION.md` → Option 1](./AZURE-AUTOMATION.md#option-1-azure-container-apps-jobs-recommended-default)) | Closest Azure-native equivalent: first-class scheduled trigger, user-assigned managed identity for `az`, Key Vault-backed secret reference for the kubeconfig, scale-to-zero per-execution billing. |
+| **Single operator, one lab/demo cluster, you want the lowest-ceremony option** | **systemd timer on a small "ops jumpbox" VM** ([Option C](#option-c-systemd-timer--service-single-host-modern-linux)) | One small VM, two unit files, system-assigned MI for `az`. No GitHub Actions runner cost, no Container Apps environment to stand up. |
+| **Your org is on Azure DevOps and doesn't use GitHub at all** | **Azure DevOps Pipelines** ([`AZURE-AUTOMATION.md` → at-a-glance](./AZURE-AUTOMATION.md#azure-devops-pipelines-scheduled)) | Same overall shape as GitHub Actions, supports workload identity federation to Azure, fits the existing toolchain. |
+| **Your org already runs everything through Azure Automation runbooks** | **Automation + Linux Hybrid Worker** ([`AZURE-AUTOMATION.md` → Option 2](./AZURE-AUTOMATION.md#option-2-azure-automation--linux-hybrid-worker)) | Only worth the Hybrid Worker overhead if one is already serving other runbooks. For *just* these two scripts a host systemd timer is less moving parts. |
+
+For a deeper "why" on these recommendations, plus the explicit
+"don't use these" list (AKS CronJob, Azure Batch, Logic Apps alone,
+classic Scheduler, Update Manager, ACI scheduled via Logic Apps),
+see [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md).
+
+---
+
 ## Option A: GitHub Actions (recommended for teams)
 
 The repo ships an example workflow at
