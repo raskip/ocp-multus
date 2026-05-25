@@ -1,0 +1,11 @@
+cluster_subscription_id = "00000000-0000-0000-0000-000000000000"
+location                = "northeurope"
+cluster_name            = "lab"
+
+# Written by scripts/upload-rhcos.sh as rhcos.auto.tfvars during normal use.
+rhcos_vhd_url           = "https://storageaccount.blob.core.windows.net/rhcos/rhcos.vhd"
+
+tags = {
+  project  = "ocp-lab"
+  workload = "openshift-multus-poc"
+}

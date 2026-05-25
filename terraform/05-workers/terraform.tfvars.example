@@ -1,0 +1,15 @@
+cluster_subscription_id = "00000000-0000-0000-0000-000000000000"
+location                = "northeurope"
+cluster_name            = "lab"
+vm_size                 = "Standard_D4ps_v5"
+replicas                = 2
+sriov_worker_vm_size    = "Standard_D8ps_v5"
+sriov_worker_zone       = "1"
+worker_ignition_path    = "../../install/worker.ign"
+ssh_public_key_path     = "../../secrets/id_ed25519.pub"
+
+tags = {
+  project  = "ocp-lab"
+  workload = "openshift-multus-poc"
+  role     = "worker"
+}

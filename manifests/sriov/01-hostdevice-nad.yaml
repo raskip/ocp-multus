@@ -1,0 +1,28 @@
+# NetworkAttachmentDefinition that hands an entire Azure Accelerated Networking
+# NIC directly into a pod network namespace via host-device CNI.
+#
+# Caveats:
+# - When this pod is running, the host loses eth2 entirely. Don't put any
+#   host workload on the SR-IOV NIC.
+# - Only ONE pod at a time per node can claim the device.
+# - Static IPAM must use the IP Azure pre-assigned to the NIC so Azure SDN
+#   doesn't filter source-IP-mismatched egress.
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: hostdevice-sriov
+  namespace: sriov-demo
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "hostdevice-sriov",
+      "type": "host-device",
+      "device": "eth2",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          { "address": "10.20.3.4/24", "gateway": "10.20.3.1" }
+        ]
+      }
+    }

@@ -1,0 +1,43 @@
+# Single-replica deployment pinned to a host-device-capable worker.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sriov-demo
+  namespace: sriov-demo
+  labels:
+    app: sriov-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sriov-demo
+  template:
+    metadata:
+      labels:
+        app: sriov-demo
+      annotations:
+        k8s.v1.cni.cncf.io/networks: hostdevice-sriov
+    spec:
+      nodeSelector:
+        sriov.demo/capable: "true"
+      containers:
+        - name: net
+          image: quay.io/fedora/fedora:41
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              dnf -y install iproute iputils ethtool pciutils tcpdump curl --setopt=install_weak_deps=False >/dev/null 2>&1 || true
+              echo "=== interfaces ==="
+              ip -br link
+              echo "=== addresses ==="
+              ip -br addr
+              echo "=== routes ==="
+              ip route
+              echo "=== net1 driver ==="
+              ethtool -i net1 || true
+              echo "=== sleeping ==="
+              exec sleep infinity
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN", "NET_RAW"]
+            runAsUser: 0

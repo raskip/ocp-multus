@@ -1,0 +1,22 @@
+cluster_subscription_id       = "00000000-0000-0000-0000-000000000000"
+private_dns_subscription_id   = "22222222-2222-2222-2222-222222222222"
+hub_dns_resource_group        = "rg-private-dns-example"
+location                      = "northeurope"
+cluster_name                  = "lab"
+infra_id                      = "lab-xxxxx"
+vnet_name                     = "vnet-ocp-example"
+vnet_resource_group           = "rg-network-example"
+workload_resource_group_name  = "rg-ocp-lab"
+private_dns_zone_name         = "ocp.example.com"
+admin_ssh_source_ip           = "203.0.113.10/32"
+
+subnet_master_cidr            = "10.20.1.0/28"
+subnet_worker_cidr            = "10.20.1.16/28"
+subnet_bootstrap_cidr         = "10.20.1.32/28"
+subnet_multus_cidr            = "10.20.2.0/24"
+subnet_sriov_cidr             = "10.20.3.0/24"
+
+tags = {
+  project  = "ocp-lab"
+  workload = "openshift-multus-poc"
+}

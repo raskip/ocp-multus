@@ -1,0 +1,49 @@
+# Large binaries (downloaded separately)
+openshift-install
+oc
+kubectl
+openshift-install-linux.tar.gz
+openshift-client-linux.tar.gz
+
+# Secrets
+secrets/
+!secrets/.gitkeep
+*.pem
+*.key
+kubeconfig
+kubeadmin-password
+
+# Rendered install-config (contains pull secret + ssh key)
+install-config/install-config.yaml
+
+# Installer-generated output
+install/
+auth/
+*.ign
+*.ignition
+metadata.json
+.openshift_install.log
+.openshift_install_state.json
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.auto.tfvars.json
+*.auto.tfvars
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local
+.env
+config/cluster.env
+*.swp
+*.bak

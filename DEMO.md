@@ -1,0 +1,153 @@
+# OpenShift on Azure UPI with Multus
+
+This runbook deploys a self-managed OpenShift cluster on Azure VMs and then validates secondary pod networking with Multus.
+
+The Terraform stages are intentionally separate so you can inspect and troubleshoot each UPI phase.
+
+## Prerequisites
+
+- Azure subscription access for the cluster resource group.
+- Azure subscription access for the public parent DNS zone.
+- Existing VNet with enough free address space for the OpenShift subnets.
+- Existing `privatelink.blob.core.windows.net` private DNS zone reachable from the cluster VNet, or an equivalent private DNS design.
+- Azure CLI, Terraform, `jq`, `make`, `perl`, `openshift-install`, and `oc`.
+- Red Hat pull secret.
+- SSH keypair for RHCOS and helper VMs.
+- ARM64 VM quota for the selected VM sizes, or adjust the VM sizes and RHCOS architecture consistently.
+
+## Configuration
+
+Copy examples and edit them for your environment:
+
+```bash
+cp config/cluster.example.env config/cluster.env
+cp terraform/00-prereqs/terraform.tfvars.example terraform/00-prereqs/terraform.tfvars
+cp terraform/01-network/terraform.tfvars.example terraform/01-network/terraform.tfvars
+cp terraform/02-image/terraform.tfvars.example terraform/02-image/terraform.tfvars
+cp terraform/03-bootstrap/terraform.tfvars.example terraform/03-bootstrap/terraform.tfvars
+cp terraform/04-control-plane/terraform.tfvars.example terraform/04-control-plane/terraform.tfvars
+cp terraform/05-workers/terraform.tfvars.example terraform/05-workers/terraform.tfvars
+```
+
+Create local secrets:
+
+```bash
+mkdir -p secrets
+cp /path/to/pull-secret.txt secrets/pull-secret.txt
+ssh-keygen -t ed25519 -f secrets/id_ed25519 -N ''
+```
+
+Authenticate:
+
+```bash
+az login
+export CLUSTER_SUBSCRIPTION_ID="<cluster-subscription-id>"
+az account set --subscription "$CLUSTER_SUBSCRIPTION_ID"
+```
+
+## Deploy
+
+```bash
+make verify
+
+# 1. DNS, workload resource group, storage, and private DNS
+make prereqs
+
+# 2. Subnets, NSGs, internal load balancers, private endpoint, uploader VM
+make network
+
+# 3. Render install-config.yaml
+make install-config
+
+# 4. Create manifests, remove Machine API manifests, and create ignition
+make ignition
+
+# 5. Upload RHCOS and create the Azure image
+make image
+
+# 6. Upload bootstrap ignition pointer and create bootstrap VM
+make bootstrap
+
+# 7. Create control plane
+make control-plane
+
+# 8. Wait for bootstrap, then remove bootstrap VM
+./openshift-install --dir=install wait-for bootstrap-complete --log-level=info
+make destroy-bootstrap
+
+# 9. Create workers
+make workers
+```
+
+Approve worker CSRs until nodes become ready:
+
+```bash
+while true; do
+  oc get csr -o json \
+    | jq -r '.items[] | select(.status == {}) | .metadata.name' \
+    | xargs -r oc adm certificate approve
+  sleep 20
+done
+```
+
+Wait for completion:
+
+```bash
+./openshift-install --dir=install wait-for install-complete --log-level=info
+```
+
+## Multus macvlan validation
+
+Check the secondary worker NIC name first:
+
+```bash
+oc get nodes -l node-role.kubernetes.io/worker -o name \
+  | xargs -I{} oc debug {} -- chroot /host ip -br a
+```
+
+If the secondary NIC is not `eth1`, update `manifests/multus/01-macvlan-nad.yaml`.
+
+Apply the demo:
+
+```bash
+oc apply -f manifests/multus/01-macvlan-nad.yaml
+oc apply -f manifests/multus/02-dualnic-pod.yaml
+oc -n multus-demo rollout status deploy/dualnic --timeout=5m
+oc -n multus-demo exec deploy/dualnic -- ip -br a
+```
+
+## Host-device / SR-IOV-style validation
+
+The optional SR-IOV-style worker uses Azure Accelerated Networking and Multus host-device CNI to move a dedicated NIC into a pod network namespace.
+
+Before applying the manifests:
+
+1. Confirm the SR-IOV-style worker is Ready.
+2. Confirm the dedicated NIC name inside RHCOS, default `eth2`.
+3. Confirm the static IP in `manifests/sriov/01-hostdevice-nad.yaml` matches the Azure-assigned NIC IP.
+
+```bash
+oc label node <sriov-worker-node> sriov.demo/capable=true
+oc apply -f manifests/sriov/00-namespace.yaml
+oc adm policy add-scc-to-user privileged -z default -n sriov-demo
+oc apply -f manifests/sriov/01-hostdevice-nad.yaml
+oc apply -f manifests/sriov/02-demo-pod.yaml
+oc -n sriov-demo wait --for=condition=Available deploy/sriov-demo --timeout=180s
+oc -n sriov-demo logs deploy/sriov-demo
+```
+
+## Teardown
+
+Destroy in reverse order:
+
+```bash
+make destroy-workers
+make destroy-control-plane
+make destroy-bootstrap
+make destroy-image
+make destroy-network
+make destroy-prereqs
+make clean-install
+```
+
+`make destroy` runs the same sequence.
