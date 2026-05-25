@@ -6,22 +6,33 @@
 # Default mode (--graceful) follows the official Red Hat procedure:
 #   https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/backup_and_restore/graceful-shutdown-cluster
 #
-#   1. Take an etcd backup (unless --no-backup).
-#   2. Cordon every node so no new pods land mid-shutdown.
-#   3. Drain worker nodes.
-#   4. Issue `oc debug node/<name> -- chroot /host shutdown -h 1` on every
-#      node. The control plane node currently serving the API VIP is
-#      processed last (otherwise the command fails mid-loop).
-#   5. Wait until Azure reports every cluster VM as PowerState/stopped.
-#   6. `az vm deallocate` the cluster VMs in batch.
+#   1. Preflight: require >=3 control plane nodes and warn on NotReady masters
+#      (skip with --no-preflight).
+#   2. Take an etcd backup (unless --no-backup).
+#   3. Confirm (unless --yes / ASSUME_YES=1).
+#   4. Cordon every node so no new pods land mid-shutdown.
+#   5. Drain worker nodes (timeout per --drain-timeout, default 15s).
+#   6. Issue `oc debug node/<name> -- chroot /host shutdown -h <SHUTDOWN_DELAY_MIN>`
+#      on every node. A deterministic last control plane node is processed last
+#      so the shutdown loop has a stable termination target.
+#   7. Poll until Azure reports every cluster VM as PowerState/stopped or
+#      PowerState/deallocated (up to --timeout minutes).
+#   8. `az vm deallocate --no-wait` the cluster VMs in batch. If step 7 timed
+#      out, the script REFUSES to deallocate unless --force-deallocate-after-timeout.
 #
-# --fast mode skips steps 2-5 (no in-OS shutdown) and goes straight to
-# `az vm deallocate`. This is faster but can corrupt etcd if the cluster
-# is under load. Use only when you understand the risk.
+# --fast mode skips steps 1, 4-7 (no in-OS shutdown) and goes straight to
+# `az vm deallocate` after confirmation and an optional backup. It is faster
+# but can corrupt etcd if the cluster is under load. Use only when you
+# understand the risk.
 #
 # Usage:
-#   scripts/cluster-shutdown.sh [--graceful|--fast] [--no-backup] [--yes]
-#                               [--timeout <minutes>] [--dry-run]
+#   scripts/cluster-shutdown.sh [--graceful|--fast]
+#                               [--no-backup] [--yes] [--no-preflight]
+#                               [--timeout <minutes>]
+#                               [--shutdown-delay-min <minutes>]
+#                               [--drain-timeout <duration>]
+#                               [--force-deallocate-after-timeout]
+#                               [--dry-run]
 set -euo pipefail
 
 # shellcheck source=lib/common.sh
@@ -48,7 +59,7 @@ while (( $# > 0 )); do
     --force-deallocate-after-timeout) FORCE_DEALLOCATE_AFTER_TIMEOUT=1; shift ;;
     --dry-run)   DRY_RUN=1; shift ;;
     -h|--help)
-      sed -n '2,24p' "$0"; exit 0 ;;
+      sed -n '2,35p' "$0"; exit 0 ;;
     *)
       log_err "unknown flag: $1"; exit 2 ;;
   esac

@@ -5,14 +5,17 @@
 # still work.
 #
 # Subcommands:
-#   down    cordon + drain workers, then `az vm deallocate` worker VMs
-#   up      `az vm start` workers, wait Ready, auto-approve kubelet CSRs, uncordon
-#   status  show worker Azure power state alongside node Ready/SchedulingDisabled
+#   down    cordon + drain workers, in-OS shutdown, wait until Azure reports
+#           workers stopped/deallocated, then `az vm deallocate` worker VMs.
+#           Refuses to deallocate if workers did not gracefully stop in time.
+#   up      `az vm start` workers, wait Ready, auto-approve kubelet CSRs,
+#           uncordon.
+#   status  show worker Azure power state alongside node Ready/SchedulingDisabled.
 #
 # Usage:
-#   scripts/cluster-scale-workers.sh down  [--yes] [--timeout <min>] [--dry-run]
-#   scripts/cluster-scale-workers.sh up    [--no-approve] [--skip-uncordon]
-#                                          [--timeout <min>] [--dry-run]
+#   scripts/cluster-scale-workers.sh down   [--yes] [--timeout <min>] [--dry-run]
+#   scripts/cluster-scale-workers.sh up     [--no-approve] [--skip-uncordon]
+#                                           [--timeout <min>] [--dry-run]
 #   scripts/cluster-scale-workers.sh status
 set -euo pipefail
 
@@ -22,7 +25,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 SUB="${1:-}"; [[ -n "$SUB" ]] && shift || true
 case "$SUB" in
   down|up|status) ;;
-  -h|--help|"") sed -n '2,16p' "$0"; exit 0 ;;
+  -h|--help|"") sed -n '2,19p' "$0"; exit 0 ;;
   *) log_err "unknown subcommand: $SUB"; exit 2 ;;
 esac
 

@@ -70,8 +70,7 @@ The default topology is internal: `publish: Internal`.
 
 The cluster can be safely stopped to save Azure compute cost and brought back
 later. Just deallocating VMs in Azure is not safe on its own — etcd needs an
-in-OS graceful shutdown first. See the dedicated runbook [`OPERATIONS.md`](./OPERATIONS.md)
-for details. Common operations:
+in-OS graceful shutdown first. Common operations:
 
 ```bash
 make cluster-status        # show VM power state, nodes, operators, etcd, cert expiry
@@ -81,6 +80,13 @@ make cluster-startup       # start VMs, auto-approve CSRs, uncordon, wait Ready
 make workers-down          # cheaper option: stop only workers, keep API + etcd up
 make workers-up
 ```
+
+Documentation:
+
+- [`OPERATIONS.md`](./OPERATIONS.md) — full operating runbook (when to use which, cost model, prerequisites, troubleshooting, end-to-end walkthrough).
+- [`SCHEDULING.md`](./SCHEDULING.md) — scheduled automation: GitHub Actions, Linux cron, systemd timers.
+- [`docs/scripts/`](./docs/scripts/) — per-script CLI reference (synopsis, flags, examples, exit codes).
+
 
 ## Important notes
 

@@ -162,6 +162,11 @@ runbook in [`OPERATIONS.md`](./OPERATIONS.md) covers:
 - `make cluster-startup` — boot, auto-approve kubelet CSRs, uncordon, wait healthy.
 - `make workers-down` / `make workers-up` — keep the control plane up and pause workers only.
 
+For unattended scheduled runs (overnight shutdown / morning startup via
+GitHub Actions, Linux cron, or systemd timers) see [`SCHEDULING.md`](./SCHEDULING.md).
+For the full CLI reference of every lifecycle script see
+[`docs/scripts/`](./docs/scripts/).
+
 The cluster can stay deallocated for up to ~1 year before the internal
 kube-apiserver-to-kubelet signer expires and manual CSR recovery is required.
 Always take an etcd backup before stopping.

@@ -5,14 +5,17 @@
 # Follows the Red Hat procedure:
 #   https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/backup_and_restore/graceful-restart-cluster
 #
-#   1. `az vm start` the control plane VMs.
-#   2. `az vm start` the worker VMs (and SR-IOV worker).
-#   3. Wait for the Kubernetes API to respond.
-#   4. Loop-approve pending kubelet-client / kubelet-serving CSRs for
+#   1. `az vm start` the control plane VMs first.
+#   2. Wait for the Kubernetes API to respond.
+#   3. Loop-approve pending kubelet-client / kubelet-serving CSRs for
 #      system:node:* requesters (unless --no-approve).
-#   5. Wait until every control plane and worker node reports Ready.
-#   6. Uncordon every node (unless --skip-uncordon).
-#   7. Wait until every clusteroperator is Available / !Progressing / !Degraded.
+#   4. Wait until every control plane node reports Ready.
+#   5. `az vm start` the worker VMs (and SR-IOV worker) once the control
+#      plane is healthy.
+#   6. Wait until every worker node reports Ready (approving CSRs as needed).
+#   7. Uncordon every node (unless --skip-uncordon).
+#   8. Wait until every clusteroperator is Available / !Progressing / !Degraded.
+#   9. Verify etcd member health.
 #
 # Usage:
 #   scripts/cluster-startup.sh [--no-approve] [--skip-uncordon]
@@ -33,7 +36,7 @@ while (( $# > 0 )); do
     --timeout)       TIMEOUT_MIN=$(flag_value "--timeout" "${2:-}"); shift 2 ;;
     --dry-run)       DRY_RUN=1; shift ;;
     -h|--help)
-      sed -n '2,19p' "$0"; exit 0 ;;
+      sed -n '2,22p' "$0"; exit 0 ;;
     *)
       log_err "unknown flag: $1"; exit 2 ;;
   esac
@@ -117,10 +120,18 @@ else
 fi
 
 log_step "waiting for clusteroperators to converge"
-wait_for_cluster_operators "$TIMEOUT_MIN" || log_warn "continuing despite operator warnings; check 'oc get co'"
+if ! wait_for_cluster_operators "$TIMEOUT_MIN"; then
+  log_err "cluster operators did not converge within ${TIMEOUT_MIN} minutes"
+  log_err "run 'make cluster-status' and investigate before treating startup as successful"
+  exit 1
+fi
 
 log_step "etcd health"
-etcd_health || log_warn "etcd health check did not pass; investigate before considering startup successful"
+if ! etcd_health; then
+  log_err "etcd health check did not pass; do not consider startup successful"
+  log_err "run 'make cluster-status' and follow Red Hat etcd recovery docs if needed"
+  exit 1
+fi
 
 log_step "summary"
 oc get nodes -o wide || true

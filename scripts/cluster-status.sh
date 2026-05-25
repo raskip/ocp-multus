@@ -9,10 +9,17 @@
 #   - clusteroperator status
 #   - etcd member health (via etcdctl in an etcd pod)
 #   - kube-apiserver-to-kubelet signer expiry (cluster-down-deadline)
+#
+# Usage:
+#   scripts/cluster-status.sh
 set -euo pipefail
 
 # shellcheck source=lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+case "${1:-}" in
+  -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+esac
 
 load_config
 require_cmd jq
