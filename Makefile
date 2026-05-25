@@ -8,6 +8,7 @@ OC        := $(CURDIR)/oc
 INSTALL_DIR := $(CURDIR)/install
 
 .PHONY: help verify prereqs network upload-rhcos image install-config ignition \
+        tfvars \
         upload-ignition bootstrap control-plane destroy-bootstrap workers \
         destroy-workers destroy-control-plane destroy-image destroy-network \
         destroy-prereqs destroy clean-install \
@@ -26,16 +27,24 @@ verify:
 	@test -f secrets/id_ed25519.pub || (echo "ERROR: secrets/id_ed25519.pub missing (run: ssh-keygen -t ed25519 -f secrets/id_ed25519 -N '')" && exit 1)
 
 # ---- Terraform stages ----
+# tfvars renders ARCHITECTURE + VM sizes from config/cluster.env into each
+# stack as *.auto.tfvars (gitignored) so cluster.env is the single source of truth.
+tfvars: verify
+	@bash scripts/render-tfvars.sh
+
 prereqs:           ; cd terraform/00-prereqs        && $(TF) init && $(TF) apply -auto-approve
-network:           ; cd terraform/01-network        && $(TF) init && $(TF) apply -auto-approve
+network:           tfvars
+	cd terraform/01-network        && $(TF) init && $(TF) apply -auto-approve
 upload-rhcos:      ; bash scripts/upload-rhcos.sh
-image:             upload-rhcos
+image:             tfvars upload-rhcos
 	cd terraform/02-image && $(TF) init && $(TF) apply -auto-approve
 upload-ignition:   ; bash scripts/upload-ignition.sh
-bootstrap:         upload-ignition
+bootstrap:         tfvars upload-ignition
 	cd terraform/03-bootstrap && $(TF) init && $(TF) apply -auto-approve
-control-plane:     ; cd terraform/04-control-plane  && $(TF) init && $(TF) apply -auto-approve
-workers:           ; cd terraform/05-workers        && $(TF) init && $(TF) apply -auto-approve
+control-plane:     tfvars
+	cd terraform/04-control-plane  && $(TF) init && $(TF) apply -auto-approve
+workers:           tfvars
+	cd terraform/05-workers        && $(TF) init && $(TF) apply -auto-approve
 
 destroy-workers:        ; cd terraform/05-workers       && $(TF) destroy -auto-approve
 destroy-bootstrap:      ; cd terraform/03-bootstrap     && $(TF) destroy -auto-approve

@@ -15,6 +15,7 @@ cost without destroying it.
 >
 > For scheduled / unattended use see [`SCHEDULING.md`](./SCHEDULING.md).
 > For the full per-script command reference see [`docs/scripts/`](./docs/scripts/).
+> For CPU architecture choice (x86_64 vs arm64) see [`CPU-ARCHITECTURE.md`](./CPU-ARCHITECTURE.md).
 
 Why not just `az vm deallocate`? Because OpenShift's control plane runs etcd,
 a distributed consensus store. Yanking power away from etcd VMs without first

@@ -1,7 +1,9 @@
 cluster_subscription_id = "00000000-0000-0000-0000-000000000000"
 location                = "northeurope"
 cluster_name            = "lab"
-vm_size                 = "Standard_D8ps_v5"
+# vm_size is set by scripts/render-tfvars.sh as vm-size.auto.tfvars from
+# config/cluster.env (CONTROL_PLANE_VM_SIZE). *.auto.tfvars overrides this
+# file in terraform precedence; edit cluster.env to change it.
 replicas                = 3
 master_ignition_path    = "../../install/master.ign"
 ssh_public_key_path     = "../../secrets/id_ed25519.pub"

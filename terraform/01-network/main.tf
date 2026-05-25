@@ -17,6 +17,11 @@ data "terraform_remote_state" "prereqs" {
 locals {
   storage_account_id   = data.terraform_remote_state.prereqs.outputs.storage_account_id
   storage_account_name = data.terraform_remote_state.prereqs.outputs.storage_account_name
+
+  uploader_vm_size_default   = var.architecture == "x86_64" ? "Standard_D2s_v5" : "Standard_D2ps_v5"
+  uploader_image_sku_default = var.architecture == "x86_64" ? "server" : "server-arm64"
+  uploader_vm_size           = var.uploader_vm_size != "" ? var.uploader_vm_size : local.uploader_vm_size_default
+  uploader_image_sku         = var.uploader_image_sku != "" ? var.uploader_image_sku : local.uploader_image_sku_default
 }
 
 #-----------------------------------------------------------------------------
@@ -447,7 +452,7 @@ resource "azurerm_linux_virtual_machine" "uploader" {
   name                            = "vm-uploader-${var.cluster_name}"
   location                        = var.location
   resource_group_name             = data.azurerm_resource_group.workload.name
-  size                            = "Standard_D2ps_v5"
+  size                            = local.uploader_vm_size
   admin_username                  = "azureuser"
   disable_password_authentication = true
   network_interface_ids           = [azurerm_network_interface.uploader.id]
@@ -466,7 +471,7 @@ resource "azurerm_linux_virtual_machine" "uploader" {
   source_image_reference {
     publisher = "Canonical"
     offer     = "ubuntu-24_04-lts"
-    sku       = "server-arm64"
+    sku       = local.uploader_image_sku
     version   = "latest"
   }
 

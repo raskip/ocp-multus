@@ -4,7 +4,7 @@ metadata:
   name: __CLUSTER_NAME__
 controlPlane:
   name: master
-  architecture: arm64
+  architecture: __ARCHITECTURE_OCP__
   hyperthreading: Enabled
   replicas: 3
   platform:
@@ -15,7 +15,7 @@ controlPlane:
         diskType: Premium_LRS
 compute:
   - name: worker
-    architecture: arm64
+    architecture: __ARCHITECTURE_OCP__
     hyperthreading: Enabled
     replicas: 2
     platform:

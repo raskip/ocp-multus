@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Copy the RHCOS aarch64 VHD into the cluster storage account (rhcos container)
+# Copy the RHCOS VHD into the cluster storage account (rhcos container)
 # via the uploader VM (the storage account is PE-only; WSL cannot reach it).
 # The VM streams + gunzips the .vhd.gz and uploads as a page blob.
+# Architecture (x86_64 / arm64) is taken from config/cluster.env via fetch-rhcos.sh.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

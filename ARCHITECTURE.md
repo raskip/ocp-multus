@@ -2,6 +2,8 @@
 
 This repository deploys an OpenShift UPI cluster into an existing Azure VNet. Terraform owns the Azure infrastructure; `openshift-install` owns the OpenShift manifests and ignition payloads.
 
+> For **CPU architecture** (x86_64 default vs arm64), VM-size defaults, and how the `ARCHITECTURE` setting flows into the stack, see [`CPU-ARCHITECTURE.md`](./CPU-ARCHITECTURE.md).
+
 ## Azure topology
 
 ```mermaid

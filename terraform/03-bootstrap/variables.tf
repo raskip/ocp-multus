@@ -11,7 +11,7 @@ variable "cluster_name" {
 }
 variable "vm_size" {
   type    = string
-  default = "Standard_D4ps_v5"
+  default = "Standard_D4s_v5"
 }
 variable "bootstrap_ignition_pointer" {
   description = "Ignition JSON that redirects to bootstrap.ign in blob (written by scripts/upload-ignition.sh)"

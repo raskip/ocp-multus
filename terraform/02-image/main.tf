@@ -1,10 +1,12 @@
 locals {
-  workload_rg = data.terraform_remote_state.prereqs.outputs.workload_resource_group_name
+  workload_rg  = data.terraform_remote_state.prereqs.outputs.workload_resource_group_name
+  image_suffix = var.architecture == "x86_64" ? "x86_64" : "arm64"
+  gallery_arch = var.architecture == "x86_64" ? "x64" : "Arm64"
 }
 
 # Legacy managed image bound to the blob
 resource "azurerm_image" "rhcos" {
-  name                = "img-rhcos-arm64-${var.cluster_name}"
+  name                = "img-rhcos-${local.image_suffix}-${var.cluster_name}"
   location            = var.location
   resource_group_name = local.workload_rg
   hyper_v_generation  = "V2"
@@ -19,29 +21,29 @@ resource "azurerm_image" "rhcos" {
   }
 }
 
-# Shared Image Gallery for arm64 (managed image alone cannot express arch=Arm64)
+# Shared Image Gallery (managed image alone cannot express architecture metadata)
 resource "azurerm_shared_image_gallery" "ocp" {
   name                = replace("sig_ocp_${var.cluster_name}", "-", "_")
   resource_group_name = local.workload_rg
   location            = var.location
-  description         = "RHCOS aarch64 images for OpenShift cluster ${var.cluster_name}"
+  description         = "RHCOS ${local.image_suffix} images for OpenShift cluster ${var.cluster_name}"
   tags                = var.tags
 }
 
 resource "azurerm_shared_image" "rhcos" {
-  name                = "rhcos-arm64"
+  name                = "rhcos-${local.image_suffix}"
   gallery_name        = azurerm_shared_image_gallery.ocp.name
   resource_group_name = local.workload_rg
   location            = var.location
   os_type             = "Linux"
-  architecture        = "Arm64"
+  architecture        = local.gallery_arch
   hyper_v_generation  = "V2"
   specialized         = false
   tags                = var.tags
 
   identifier {
     publisher = "RedHat"
-    offer     = "rhcos-arm64"
+    offer     = "rhcos-${local.image_suffix}"
     sku       = var.cluster_name
   }
 }

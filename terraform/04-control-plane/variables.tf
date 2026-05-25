@@ -11,7 +11,7 @@ variable "cluster_name" {
 }
 variable "vm_size" {
   type    = string
-  default = "Standard_D8ps_v5"
+  default = "Standard_D8s_v5"
 }
 variable "replicas" {
   type    = number

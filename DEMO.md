@@ -13,7 +13,7 @@ The Terraform stages are intentionally separate so you can inspect and troublesh
 - Azure CLI, Terraform, `jq`, `make`, `perl`, `openshift-install`, and `oc`.
 - Red Hat pull secret.
 - SSH keypair for RHCOS and helper VMs.
-- ARM64 VM quota for the selected VM sizes, or adjust the VM sizes and RHCOS architecture consistently.
+- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [CPU-ARCHITECTURE.md](CPU-ARCHITECTURE.md).
 
 ## Configuration
 

@@ -11,16 +11,16 @@ variable "cluster_name" {
 }
 variable "vm_size" {
   type    = string
-  default = "Standard_D4ps_v5"
+  default = "Standard_D4s_v5"
 }
 variable "replicas" {
   type    = number
   default = 2
 }
 variable "sriov_worker_vm_size" {
-  description = "VM size for the SR-IOV demo worker. D8ps_v5 has 4 NIC slots and supports MANA Accelerated Networking on ARM."
+  description = "VM size for the SR-IOV demo worker. D8s_v5 (x86_64) and D8ps_v5 (arm64) both have 4 NIC slots and support Accelerated Networking."
   type        = string
-  default     = "Standard_D8ps_v5"
+  default     = "Standard_D8s_v5"
 }
 variable "sriov_worker_zone" {
   type    = string

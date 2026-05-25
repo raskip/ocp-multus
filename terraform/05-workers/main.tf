@@ -91,7 +91,7 @@ resource "azurerm_linux_virtual_machine" "worker" {
 # SR-IOV demo worker (single, larger SKU, 3 NICs, AN-enabled SR-IOV NIC)
 #
 # Separate from the count-based workers above so the existing pair stays on
-# Standard_D4ps_v5 (2 NIC slots, no AN) untouched.
+# the default worker SKU (D4s_v5 / D4ps_v5, 2 NIC slots) untouched.
 #-----------------------------------------------------------------------------
 resource "azurerm_network_interface" "sriov_worker_primary" {
   name                  = "nic-worker-sriov-primary-${var.cluster_name}"

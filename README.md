@@ -33,6 +33,16 @@ The default topology is internal: `publish: Internal`.
 | `manifests/multus` | Optional Multus macvlan validation. |
 | `manifests/sriov` | Optional host-device / SR-IOV-style validation. |
 
+## CPU architecture
+
+The cluster defaults to **x86_64** (Intel D*s_v5 VMs), driven by a single
+`ARCHITECTURE` setting in `config/cluster.env`. Set `ARCHITECTURE=arm64`
+to deploy on Azure Ampere D*ps_v5 VMs instead. The setting flows into the
+RHCOS image stream, the OpenShift install-config, the Shared Image
+Gallery image, the uploader VM, and the default VM sizes. See
+[CPU-ARCHITECTURE.md](./CPU-ARCHITECTURE.md) for the full mapping and override
+options.
+
 ## Quick start
 
 1. Install tools: Azure CLI, Terraform, `jq`, `make`, `perl`, `openshift-install`, and `oc`.

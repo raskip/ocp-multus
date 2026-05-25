@@ -96,6 +96,28 @@ variable "admin_ssh_source_ip" {
   type        = string
 }
 
+variable "architecture" {
+  description = "Cluster CPU architecture: x86_64 (default, Intel D*s_v5) or arm64 (Ampere D*ps_v5)."
+  type        = string
+  default     = "x86_64"
+  validation {
+    condition     = contains(["x86_64", "arm64"], var.architecture)
+    error_message = "architecture must be one of: x86_64, arm64."
+  }
+}
+
+variable "uploader_vm_size" {
+  description = "Override for the uploader VM size. Empty string uses the per-architecture default (D2s_v5 / D2ps_v5)."
+  type        = string
+  default     = ""
+}
+
+variable "uploader_image_sku" {
+  description = "Override for the uploader Ubuntu 24.04 SKU. Empty string uses the per-architecture default (server / server-arm64)."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   type = map(string)
   default = {
