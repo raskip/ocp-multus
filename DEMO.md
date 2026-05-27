@@ -195,15 +195,26 @@ oc get nodes -l node-role.kubernetes.io/worker -o name \
 ```
 
 If the secondary NIC is not `eth1`, update `manifests/multus/01-macvlan-nad.yaml`.
+On arm64 (Ampere Altra) the secondary NIC is usually named `enP*s1` — see
+[`docs/arm64-gotchas.md`](./docs/arm64-gotchas.md).
 
-Apply the demo:
+Apply the demo. The namespace manifest **must be applied first** — it sets
+the `pod-security.kubernetes.io/enforce: privileged` labels that the
+macvlan CNI needs on OpenShift 4.14+ (default profile is `restricted`).
+We also need to grant the default service account access to the
+`privileged` SCC, the same step we do for the SR-IOV demo:
 
 ```bash
+oc apply -f manifests/multus/00-namespace.yaml
+oc adm policy add-scc-to-user privileged -z default -n multus-demo
 oc apply -f manifests/multus/01-macvlan-nad.yaml
 oc apply -f manifests/multus/02-dualnic-pod.yaml
 oc -n multus-demo rollout status deploy/dualnic --timeout=5m
 oc -n multus-demo exec deploy/dualnic -- ip -br a
 ```
+
+See [`manifests/multus/README.md`](./manifests/multus/README.md) for the
+full validation walk-through and cleanup steps.
 
 ## Host-device / SR-IOV-style validation
 
