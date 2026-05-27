@@ -13,7 +13,8 @@ INSTALL_DIR := $(CURDIR)/install
         destroy-workers destroy-control-plane destroy-image destroy-network \
         destroy-prereqs destroy clean-install \
         etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
-        workers-down workers-up cluster-status
+        workers-down workers-up cluster-status \
+        ingress-hostnetwork
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
@@ -96,3 +97,12 @@ cluster-startup:    ; bash scripts/cluster-startup.sh $(STARTUP_FLAGS)
 workers-down:       ; bash scripts/cluster-scale-workers.sh down $(SCALE_FLAGS)
 workers-up:         ; bash scripts/cluster-scale-workers.sh up $(SCALE_FLAGS)
 cluster-status:     ; bash scripts/cluster-status.sh $(STATUS_FLAGS)
+
+# ---- Post-install workarounds for restricted tenants (see docs/) ----
+# Patch the default IngressController to HostNetwork. Use when this repo's
+# terraform/01-network/ pre-creates an internal apps LB (lb-ingress-internal-*)
+# with workers in its backend pool — the default LoadBalancerService strategy
+# would provision a second LB and conflict. See DEMO.md "Post-install ingress
+# step" for the full explanation.
+ingress-hostnetwork:
+	@bash scripts/ingress-hostnetwork.sh

@@ -96,6 +96,57 @@ Wait for completion:
 ./openshift-install --dir=install wait-for install-complete --log-level=info
 ```
 
+## Post-install: ingress on a pre-created internal LB
+
+This repo's Terraform pre-creates an internal apps load balancer
+(`lb-ingress-internal-*`) in `terraform/01-network/` and puts workers in
+its backend pool. The default `IngressController` is type
+`LoadBalancerService`, which makes the cluster try to create a *second*
+LB on top of the pre-created one — they conflict and `*.apps` routes
+never resolve.
+
+The fix is to patch the IngressController to `HostNetwork`, so it binds
+directly to ports 80/443 on the worker nodes that sit behind the
+pre-created LB. Run this **after** `wait-for install-complete` succeeds:
+
+```bash
+make ingress-hostnetwork
+```
+
+The target deletes the default IngressController and recreates it with
+`endpointPublishingStrategy: HostNetwork`. After ~1-2 minutes the
+ingress operator reports Available=True and `*.apps.<basedomain>`
+resolves through the pre-created LB.
+
+Verification:
+
+```bash
+oc get co ingress
+# NAME      VERSION   AVAILABLE   PROGRESSING   DEGRADED
+# ingress   4.18.x    True        False         False
+
+oc get ingresscontroller -n openshift-ingress-operator default \
+  -o jsonpath='{.spec.endpointPublishingStrategy.type}'
+# HostNetwork
+
+# Smoke test (replace baseDomain with yours)
+curl -ksI "https://console-openshift-console.apps.<baseDomain>"
+# Expect HTTP/1.1 200 OK (or 302 to /auth/...)
+```
+
+**Why this is needed:** OpenShift's default ingress strategy on cloud
+platforms is `LoadBalancerService` — it provisions a cloud LB
+automatically. When you've already pre-created the LB in IaC (so you
+can manage its NSG, peering, public-IP, etc.), the operator's
+auto-provisioned LB collides. `HostNetwork` skips the operator-side LB
+and trusts the IaC-managed one in front of the nodes.
+
+**Common failure:** if you skip this step, the symptom is `*.apps`
+DNS resolves to the pre-created LB IP but TCP 443 hangs. Check
+`oc get svc -n openshift-ingress router-default` — it should NOT exist
+after `make ingress-hostnetwork` (only the host-network listener on
+workers).
+
 ## Multus macvlan validation
 
 Check the secondary worker NIC name first:
