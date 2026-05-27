@@ -25,10 +25,13 @@ locals {
 }
 
 #-----------------------------------------------------------------------------
-# NSGs (created first so subnets can reference them inline — required by
-# policy "Subnets must have a Network Security Group")
+# NSGs (repo-managed mode only — when manage_network_resources = true).
+# In BYO-network mode (manage_network_resources = false), the customer's
+# network team has already created and attached NSGs to the subnets;
+# we don't reference them from here.
 #-----------------------------------------------------------------------------
 resource "azurerm_network_security_group" "master" {
+  count               = var.manage_network_resources ? 1 : 0
   name                = "nsg-ocp-master-${var.cluster_name}"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.workload.name
@@ -81,6 +84,7 @@ resource "azurerm_network_security_group" "master" {
 }
 
 resource "azurerm_network_security_group" "worker" {
+  count               = var.manage_network_resources ? 1 : 0
   name                = "${var.infra_id}-nsg"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.workload.name
@@ -126,30 +130,41 @@ resource "azurerm_network_security_group" "worker" {
 }
 
 #-----------------------------------------------------------------------------
-# Subnets carved out of the existing VNet (via azapi so NSG is inline and
-# satisfies the "subnet must have NSG" policy at creation time)
+# Subnets carved out of the existing VNet (repo-managed mode only — when
+# manage_network_resources = true). In BYO mode the customer's network
+# team has already created the subnets; we just consume the IDs.
+#
+# Created via azapi so the NSG is inline at creation time — required by
+# policy "Subnets must have a Network Security Group" in many tenants.
 #-----------------------------------------------------------------------------
 locals {
   vnet_id = data.azurerm_virtual_network.shared.id
 }
 
 resource "azapi_resource" "subnet_master" {
+  count                     = var.manage_network_resources ? 1 : 0
   type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
   name                      = "snet-ocp-master"
   parent_id                 = local.vnet_id
   schema_validation_enabled = false
   body = {
-    properties = {
-      addressPrefix                     = var.subnet_master_cidr
-      networkSecurityGroup              = { id = azurerm_network_security_group.master.id }
-      privateEndpointNetworkPolicies    = "Disabled"
-      privateLinkServiceNetworkPolicies = "Enabled"
-    }
+    properties = merge(
+      {
+        addressPrefix                     = var.subnet_master_cidr
+        networkSecurityGroup              = { id = azurerm_network_security_group.master[0].id }
+        privateEndpointNetworkPolicies    = "Disabled"
+        privateLinkServiceNetworkPolicies = "Enabled"
+      },
+      contains(var.attach_route_table_to_extra_subnets, "master") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
   }
   response_export_values = ["id"]
 }
 
 resource "azurerm_route_table" "node" {
+  count               = var.manage_network_resources ? 1 : 0
   name                = "${var.infra_id}-node-routetable"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.workload.name
@@ -162,6 +177,7 @@ resource "azurerm_route_table" "node" {
 }
 
 resource "azapi_resource" "subnet_worker" {
+  count                     = var.manage_network_resources ? 1 : 0
   type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
   name                      = "snet-ocp-worker"
   parent_id                 = local.vnet_id
@@ -169,8 +185,8 @@ resource "azapi_resource" "subnet_worker" {
   body = {
     properties = {
       addressPrefix        = var.subnet_worker_cidr
-      networkSecurityGroup = { id = azurerm_network_security_group.worker.id }
-      routeTable           = { id = azurerm_route_table.node.id }
+      networkSecurityGroup = { id = azurerm_network_security_group.worker[0].id }
+      routeTable           = { id = azurerm_route_table.node[0].id }
     }
   }
   response_export_values = ["id"]
@@ -178,56 +194,80 @@ resource "azapi_resource" "subnet_worker" {
 }
 
 resource "azapi_resource" "subnet_bootstrap" {
+  count                     = var.manage_network_resources ? 1 : 0
   type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
   name                      = "snet-ocp-bootstrap"
   parent_id                 = local.vnet_id
   schema_validation_enabled = false
   body = {
-    properties = {
-      addressPrefix        = var.subnet_bootstrap_cidr
-      networkSecurityGroup = { id = azurerm_network_security_group.master.id }
-    }
+    properties = merge(
+      {
+        addressPrefix        = var.subnet_bootstrap_cidr
+        networkSecurityGroup = { id = azurerm_network_security_group.master[0].id }
+      },
+      contains(var.attach_route_table_to_extra_subnets, "bootstrap") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
   }
   response_export_values = ["id"]
   depends_on             = [azapi_resource.subnet_worker]
 }
 
 resource "azapi_resource" "subnet_multus" {
+  count                     = var.manage_network_resources ? 1 : 0
   type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
   name                      = "snet-ocp-multus"
   parent_id                 = local.vnet_id
   schema_validation_enabled = false
   body = {
-    properties = {
-      addressPrefix        = var.subnet_multus_cidr
-      networkSecurityGroup = { id = azurerm_network_security_group.worker.id }
-    }
+    properties = merge(
+      {
+        addressPrefix        = var.subnet_multus_cidr
+        networkSecurityGroup = { id = azurerm_network_security_group.worker[0].id }
+      },
+      contains(var.attach_route_table_to_extra_subnets, "multus") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
   }
   response_export_values = ["id"]
   depends_on             = [azapi_resource.subnet_bootstrap]
 }
 
 resource "azapi_resource" "subnet_sriov" {
+  count                     = var.manage_network_resources ? 1 : 0
   type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
   name                      = "snet-ocp-sriov"
   parent_id                 = local.vnet_id
   schema_validation_enabled = false
   body = {
-    properties = {
-      addressPrefix        = var.subnet_sriov_cidr
-      networkSecurityGroup = { id = azurerm_network_security_group.worker.id }
-    }
+    properties = merge(
+      {
+        addressPrefix        = var.subnet_sriov_cidr
+        networkSecurityGroup = { id = azurerm_network_security_group.worker[0].id }
+      },
+      contains(var.attach_route_table_to_extra_subnets, "sriov") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
   }
   response_export_values = ["id"]
   depends_on             = [azapi_resource.subnet_multus]
 }
 
+#-----------------------------------------------------------------------------
+# Subnet IDs (and the route-table ID) used by every downstream resource in
+# this stack. In repo-managed mode they come from the azapi/azurerm
+# resources above; in BYO mode they come from the var.subnet_*_id inputs.
+#-----------------------------------------------------------------------------
 locals {
-  subnet_master_id    = azapi_resource.subnet_master.id
-  subnet_worker_id    = azapi_resource.subnet_worker.id
-  subnet_bootstrap_id = azapi_resource.subnet_bootstrap.id
-  subnet_multus_id    = azapi_resource.subnet_multus.id
-  subnet_sriov_id     = azapi_resource.subnet_sriov.id
+  subnet_master_id    = var.manage_network_resources ? azapi_resource.subnet_master[0].id : var.subnet_master_id
+  subnet_worker_id    = var.manage_network_resources ? azapi_resource.subnet_worker[0].id : var.subnet_worker_id
+  subnet_bootstrap_id = var.manage_network_resources ? azapi_resource.subnet_bootstrap[0].id : var.subnet_bootstrap_id
+  subnet_multus_id    = var.manage_network_resources ? azapi_resource.subnet_multus[0].id : var.subnet_multus_id
+  subnet_sriov_id     = var.manage_network_resources ? azapi_resource.subnet_sriov[0].id : var.subnet_sriov_id
+  route_table_id      = var.manage_network_resources ? azurerm_route_table.node[0].id : var.route_table_id
 }
 
 #-----------------------------------------------------------------------------

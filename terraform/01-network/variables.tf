@@ -68,6 +68,94 @@ variable "subnet_sriov_cidr" {
   default = "10.20.3.0/24"
 }
 
+#-----------------------------------------------------------------------------
+# BYO-network mode (opt-in)
+#
+# When manage_network_resources = true (default), this stack creates the
+# NSGs, named subnets, and the cluster route table. This is the original
+# behavior and is unchanged for existing users.
+#
+# When manage_network_resources = false, this stack does NOT create any
+# NSG / subnet / route table — the customer's network team is expected
+# to have provisioned them ahead of time (with their own tooling: Bicep,
+# Terraform, az CLI, ARM, Ansible). The stack then data-looks-up the
+# pre-existing resources using the *_id inputs below.
+#
+# Either way, the cluster-specific resources (internal LBs, DNS records,
+# storage Private Endpoint, uploader VM, Windows jump VM) are always
+# created — those belong to the cluster, not to shared network plumbing.
+#
+# See docs/network-prereqs.md for the BYO contract (subnets, NSGs, UDR,
+# DNS, peering) and examples/network-prereqs-azcli/ for runnable
+# scripts a network team can adapt.
+#-----------------------------------------------------------------------------
+variable "manage_network_resources" {
+  description = "When true (default), this stack creates NSGs, subnets, and the route table. When false, the stack data-looks-up pre-existing resources via the *_id inputs (BYO-network mode)."
+  type        = bool
+  default     = true
+}
+
+variable "subnet_master_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing master subnet. Required when manage_network_resources = false."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_worker_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing worker subnet. Required when manage_network_resources = false."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_bootstrap_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing bootstrap subnet. Required when manage_network_resources = false."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_multus_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing multus subnet. Required when manage_network_resources = false."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_sriov_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing sriov subnet. Required when manage_network_resources = false."
+  type        = string
+  default     = ""
+}
+
+variable "nsg_master_id" {
+  description = "BYO-network only: full Resource ID of the NSG attached to the master subnet. Optional informational input — not referenced when manage_network_resources = false (the NSG is already attached to the subnet)."
+  type        = string
+  default     = ""
+}
+
+variable "nsg_worker_id" {
+  description = "BYO-network only: full Resource ID of the NSG attached to the worker subnet. Optional informational input — not referenced when manage_network_resources = false."
+  type        = string
+  default     = ""
+}
+
+variable "route_table_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing route table that the cluster cloud-provider will mutate. Required when manage_network_resources = false (the cloud provider's identity needs Network Contributor on this scope)."
+  type        = string
+  default     = ""
+}
+
+variable "attach_route_table_to_extra_subnets" {
+  description = "Repo-managed mode only: extra subnet roles (besides worker) to attach the cluster route table to. Recommended for hub-spoke + firewall egress: [\"master\", \"bootstrap\", \"multus\"]. Default is empty for backward compat (only worker is attached, matching the historical behavior)."
+  type        = list(string)
+  default     = []
+  validation {
+    condition = alltrue([
+      for s in var.attach_route_table_to_extra_subnets :
+      contains(["master", "bootstrap", "multus", "sriov"], s)
+    ])
+    error_message = "attach_route_table_to_extra_subnets entries must be a subset of: master, bootstrap, multus, sriov."
+  }
+}
+
 variable "private_dns_zone_name" {
   type    = string
   default = "ocp.example.com"

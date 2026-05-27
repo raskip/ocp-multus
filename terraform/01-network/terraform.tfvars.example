@@ -16,6 +16,26 @@ subnet_bootstrap_cidr         = "10.20.1.32/28"
 subnet_multus_cidr            = "10.20.2.0/24"
 subnet_sriov_cidr             = "10.20.3.0/24"
 
+# Recommended for hub-spoke + firewall-egress installs: attach the
+# cluster route table to master/bootstrap/multus subnets in addition
+# to worker (worker is always attached). Default empty preserves the
+# historical behavior (only worker subnet has the UDR).
+#
+# attach_route_table_to_extra_subnets = ["master", "bootstrap", "multus"]
+
+#-----------------------------------------------------------------------------
+# BYO-network mode (manage_network_resources = false).
+# Uncomment + fill in if your network team has pre-created the subnets,
+# NSGs, and route table. See docs/network-prereqs.md.
+#-----------------------------------------------------------------------------
+# manage_network_resources = false
+# subnet_master_id    = "/subscriptions/.../subnets/snet-ocp-master"
+# subnet_worker_id    = "/subscriptions/.../subnets/snet-ocp-worker"
+# subnet_bootstrap_id = "/subscriptions/.../subnets/snet-ocp-bootstrap"
+# subnet_multus_id    = "/subscriptions/.../subnets/snet-ocp-multus"
+# subnet_sriov_id     = "/subscriptions/.../subnets/snet-ocp-sriov"
+# route_table_id      = "/subscriptions/.../routeTables/rt-ocp-egress"
+
 tags = {
   project  = "ocp-lab"
   workload = "openshift-multus-poc"
