@@ -14,7 +14,7 @@ INSTALL_DIR := $(CURDIR)/install
         destroy-prereqs destroy clean-install \
         etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
         workers-down workers-up cluster-status \
-        ingress-hostnetwork
+        ingress-hostnetwork image-registry-removed
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
@@ -106,3 +106,13 @@ cluster-status:     ; bash scripts/cluster-status.sh $(STATUS_FLAGS)
 # step" for the full explanation.
 ingress-hostnetwork:
 	@bash scripts/ingress-hostnetwork.sh
+
+# Set the image-registry operator to Removed. Use when the tenant blocks
+# shared-key auth on storage accounts (allowSharedKeyAccess=false) and
+# you don't need an in-cluster registry. Idempotent. See
+# docs/image-registry-options.md for the Managed-with-AAD alternatives.
+image-registry-removed:
+	@$(OC) patch configs.imageregistry.operator.openshift.io/cluster \
+	  --type=merge \
+	  -p '{"spec":{"managementState":"Removed"}}'
+	@$(OC) wait --for=condition=Available co/image-registry --timeout=10m
