@@ -73,3 +73,85 @@ The standard workers receive a secondary NIC on the Multus subnet. The macvlan d
 The optional host-device demo gives one worker a dedicated accelerated NIC. Multus host-device CNI moves that entire NIC into one pod's network namespace. While the pod is running, the host no longer owns that NIC.
 
 Always verify actual NIC names and Azure-assigned IPs before applying the demo manifests.
+
+## OpenShift cluster view (pods, NADs, nodes)
+
+This view shows what the cluster looks like *after* the install — how the
+default cluster network (OVN-Kubernetes), Multus NetworkAttachmentDefinitions,
+and the secondary NIC subnets line up at the pod level.
+
+```mermaid
+flowchart LR
+  subgraph Worker["Worker node"]
+    direction TB
+    ETH0["eth0<br/>primary NIC<br/>pod CIDR (OVN)"]
+    ETH1["eth1<br/>secondary NIC<br/>Multus subnet"]
+    ETH2["eth2<br/>(optional) host-device NIC<br/>Accelerated Networking"]
+
+    subgraph Default["default network<br/>(OVN-Kubernetes)"]
+      P0["pod: only eth0<br/>(normal workload)"]
+    end
+    subgraph Macvlan["macvlan NAD<br/>(net1 → eth1)"]
+      P1["pod: eth0 + net1<br/>(dualnic demo)"]
+    end
+    subgraph HostDev["host-device NAD<br/>(eth2 → pod ns)"]
+      P2["pod: eth0 + net1<br/>OWNS eth2 entirely"]
+    end
+  end
+
+  ETH0 --> Default
+  ETH1 --> Macvlan
+  ETH2 --> HostDev
+```
+
+The `pod-security.kubernetes.io/enforce: privileged` label is required on
+the Multus demo namespace so that the macvlan and host-device CNI plugins
+can attach to host NICs. See [`manifests/multus/README.md`](./manifests/multus/README.md).
+
+## Data-path contrast: default CNI vs macvlan vs host-device
+
+```mermaid
+flowchart TB
+  subgraph DefaultPath["Default pod path (OVN-Kubernetes)"]
+    AppA["pod app"] --> OVS1["OVS bridge<br/>br-int"] --> Node1["node netns<br/>egress NAT to eth0"]
+  end
+  subgraph MacvlanPath["macvlan path (Multus)"]
+    AppB["pod app"] --> Net1["net1 (macvlan child of eth1)"] --> ETH1B["eth1 (shared by node)"]
+  end
+  subgraph HostDevPath["host-device path (Multus)"]
+    AppC["pod app"] --> Net1C["net1 (= eth2, moved into pod ns)"]
+  end
+```
+
+**Latency / throughput trade-off summary:**
+
+| Concern | Default CNI | macvlan | host-device |
+|---|---|---|---|
+| Encapsulation | Geneve overlay | none (L2 to NIC) | none (L2 to NIC) |
+| NAT | yes (egress) | no | no |
+| Pod gets its own NIC IP from VNet | no (pod CIDR) | yes (Multus subnet) | yes (Azure-assigned IP) |
+| NIC shared with node | n/a | yes | **no — NIC is moved into pod netns** |
+| Pods per node on this path | many | many | **one** |
+| Best for | general workloads | secondary-NIC workloads, NFV | latency-/throughput-sensitive single pod (e.g. NFV data plane, ML I/O) |
+
+## Why host-device — not the SR-IOV Operator
+
+This repo deliberately uses **Multus host-device CNI** (not the OpenShift
+SR-IOV Operator) for the dedicated-NIC validation pod. The trade-offs:
+
+- **Azure VM SR-IOV is exposed as Accelerated Networking** — there is no
+  PCI-passthrough surface that the SR-IOV Operator can carve into VFs from
+  inside the guest. The operator's value (VF discovery, NIC partitioning,
+  DPDK driver binding) requires bare-metal nodes or VMs with PCI-passthrough.
+- **Multus host-device CNI works on any Azure VM** that has a dedicated
+  secondary NIC (Accelerated Networking enabled). The CNI plugin runs
+  `ip link set` to move the entire NIC into the pod network namespace.
+- **One pod owns the NIC** while running — by design. For multi-tenant
+  partitioning of a single physical NIC, prefer SR-IOV Operator on
+  bare-metal or macvlan for software multiplexing.
+
+When customers ask "should we use SR-IOV Operator on Azure?", the answer
+for VM-based deployments is usually no — Accelerated Networking + Multus
+host-device gives the same data-path performance with much less
+operational complexity. See also the OpenShift documentation on
+*Configuring an additional network for VRF and host-device*.
