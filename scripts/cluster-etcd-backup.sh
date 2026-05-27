@@ -80,8 +80,14 @@ oc debug "node/${NODE}" --quiet --to-namespace=default -- chroot /host bash -c "
   cd '${REMOTE_OUT_DIR}'
   tar -czf /tmp/etcd-backup-${TS}.tar.gz . >&2
   base64 -w0 < /tmp/etcd-backup-${TS}.tar.gz
+  echo
   rm -f /tmp/etcd-backup-${TS}.tar.gz >&2
-" > "$DEST/etcd-backup.b64"
+" | grep -E '^[A-Za-z0-9+/=]+$' > "$DEST/etcd-backup.b64"
+# B43: filter to base64-only lines. `oc debug node` and child processes
+# (cluster-backup.sh, cert-checker, etcdctl) may emit informational text
+# to stdout despite `--quiet` and explicit `>&2` redirects. Without this
+# filter, `base64 -d` later fails with "invalid input". The trailing
+# `echo` ensures the base64 payload is on its own line for the grep.
 
 if [[ ! -s "$DEST/etcd-backup.b64" ]]; then
   log_err "remote backup produced no output; aborting"

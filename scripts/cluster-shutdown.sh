@@ -42,7 +42,10 @@ MODE="graceful"
 DO_BACKUP=1
 TIMEOUT_MIN=""
 SHUTDOWN_DELAY_MIN=1
-DRAIN_TIMEOUT="15s"
+# B47: default raised from 15s to 5m so PodDisruptionBudgets and
+# user workloads with longer terminationGracePeriodSeconds have time
+# to terminate gracefully (Red Hat recommended default).
+DRAIN_TIMEOUT="5m"
 SKIP_PREFLIGHT=0
 FORCE_DEALLOCATE_AFTER_TIMEOUT=0
 
@@ -157,6 +160,16 @@ if [[ "$MODE" == "graceful" ]]; then
         || log_warn "shutdown command on $n returned non-zero (node may already be going down)"
     fi
   done
+
+  # B48: `shutdown -h $SHUTDOWN_DELAY_MIN` waits the configured minutes
+  # before actually halting. Sleep for that same duration (+5s buffer) so
+  # the Azure polling loop doesn't spam "still waiting: VM running" for
+  # the obvious grace period.
+  if [[ "$DRY_RUN" != "1" && "$SHUTDOWN_DELAY_MIN" =~ ^[0-9]+$ ]] && (( SHUTDOWN_DELAY_MIN > 0 )); then
+    grace=$(( SHUTDOWN_DELAY_MIN * 60 + 5 ))
+    log_info "sleeping ${grace}s (shutdown -h ${SHUTDOWN_DELAY_MIN} grace + 5s) before polling Azure"
+    sleep "$grace"
+  fi
 
   log_step "waiting for Azure to report all cluster VMs stopped or deallocated"
   all_stopped=0

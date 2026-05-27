@@ -78,10 +78,21 @@ clean-install:
 	@rm -rf $(INSTALL_DIR)
 
 # ---- Day-2 cluster lifecycle (see OPERATIONS.md) ----
-etcd-backup:        ; bash scripts/cluster-etcd-backup.sh
-cluster-shutdown:   ; bash scripts/cluster-shutdown.sh
-cluster-shutdown-fast: ; bash scripts/cluster-shutdown.sh --fast
-cluster-startup:    ; bash scripts/cluster-startup.sh
-workers-down:       ; bash scripts/cluster-scale-workers.sh down
-workers-up:         ; bash scripts/cluster-scale-workers.sh up
-cluster-status:     ; bash scripts/cluster-status.sh
+# B44: env-var overrides so callers can pass extra flags to lifecycle
+# scripts via make. Examples:
+#   make cluster-shutdown SHUTDOWN_FLAGS="--no-backup --yes"
+#   make cluster-startup  STARTUP_FLAGS="--timeout 20"
+#   make etcd-backup      ETCD_BACKUP_FLAGS="--out /tmp/etcd-backups"
+ETCD_BACKUP_FLAGS ?=
+SHUTDOWN_FLAGS    ?=
+STARTUP_FLAGS     ?=
+SCALE_FLAGS       ?=
+STATUS_FLAGS      ?=
+
+etcd-backup:        ; bash scripts/cluster-etcd-backup.sh $(ETCD_BACKUP_FLAGS)
+cluster-shutdown:   ; bash scripts/cluster-shutdown.sh $(SHUTDOWN_FLAGS)
+cluster-shutdown-fast: ; bash scripts/cluster-shutdown.sh --fast $(SHUTDOWN_FLAGS)
+cluster-startup:    ; bash scripts/cluster-startup.sh $(STARTUP_FLAGS)
+workers-down:       ; bash scripts/cluster-scale-workers.sh down $(SCALE_FLAGS)
+workers-up:         ; bash scripts/cluster-scale-workers.sh up $(SCALE_FLAGS)
+cluster-status:     ; bash scripts/cluster-status.sh $(STATUS_FLAGS)

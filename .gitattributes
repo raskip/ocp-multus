@@ -1,9 +1,54 @@
-* text=auto
+# Default: treat everything as text and normalize to LF in repo.
+# Working-tree line endings are decided by the file-type rules below.
+* text=auto eol=lf
 
-*.sh text eol=lf
-Makefile text eol=lf
-*.tf text eol=lf
+# Source / config / scripts — force LF in repo *and* working tree so they
+# can be run unchanged in WSL2 / Linux from a Windows checkout.
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.toml      text eol=lf
+*.tf        text eol=lf
+*.tfvars    text eol=lf
 *.tfvars.example text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf
-*.md text eol=lf
+*.hcl       text eol=lf
+*.env       text eol=lf
+*.envrc     text eol=lf
+*.cfg       text eol=lf
+*.conf      text eol=lf
+*.ini       text eol=lf
+*.py        text eol=lf
+*.go        text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.patch     text eol=lf
+*.diff      text eol=lf
+Makefile    text eol=lf
+Dockerfile  text eol=lf
+.gitignore  text eol=lf
+.gitattributes text eol=lf
+
+# Windows-only scripts (if any) — keep CRLF so they run in PowerShell.
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.gz        binary
+*.tgz       binary
+*.zip       binary
+*.tar       binary
+*.xz        binary
+*.7z        binary
+oc          binary
+openshift-install binary

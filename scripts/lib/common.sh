@@ -99,6 +99,12 @@ require_vars() {
 # --- oc / kubectl ---------------------------------------------------------
 
 require_oc() {
+  # B45: PATH fallback so users don't need `sudo cp ./oc /usr/local/bin/`
+  # after `make tools`. If `oc` isn't on PATH but $REPO_ROOT/oc exists, use it.
+  if ! command -v oc >/dev/null 2>&1 && [[ -x "$REPO_ROOT/oc" ]]; then
+    export PATH="$REPO_ROOT:$PATH"
+    log_info "added $REPO_ROOT to PATH (found ./oc)"
+  fi
   require_cmd oc
   if ! oc whoami >/dev/null 2>&1; then
     log_err "oc is not logged in to a cluster (try: oc login ...)"
@@ -114,8 +120,32 @@ require_oc() {
 require_az() {
   require_cmd az
   if ! az account show -o none >/dev/null 2>&1; then
-    log_err "az is not logged in (try: az login)"
-    return 1
+    # B46: SP-auth fallback for non-interactive environments (WSL2, CI).
+    # Order: (1) env vars AZURE_CLIENT_ID/SECRET/TENANT_ID,
+    #        (2) JSON file at $AZURE_SP_JSON or ~/.azure/osServicePrincipal.json
+    #            (the same file openshift-install creates for UPI installs).
+    local sp_json="${AZURE_SP_JSON:-$HOME/.azure/osServicePrincipal.json}"
+    if [[ -n "${AZURE_CLIENT_ID:-}" && -n "${AZURE_CLIENT_SECRET:-}" && -n "${AZURE_TENANT_ID:-}" ]]; then
+      log_info "az not logged in; attempting SP login from env vars"
+      az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" \
+        --tenant "$AZURE_TENANT_ID" -o none \
+        || { log_err "SP login from env vars failed"; return 1; }
+    elif [[ -f "$sp_json" ]] && command -v jq >/dev/null 2>&1; then
+      log_info "az not logged in; attempting SP login from $sp_json"
+      local cid cs tid
+      cid=$(jq -r '.clientId // empty'     "$sp_json")
+      cs=$(jq  -r '.clientSecret // empty' "$sp_json")
+      tid=$(jq -r '.tenantId // empty'     "$sp_json")
+      if [[ -z "$cid" || -z "$cs" || -z "$tid" ]]; then
+        log_err "$sp_json is missing clientId/clientSecret/tenantId"
+        return 1
+      fi
+      az login --service-principal -u "$cid" -p "$cs" --tenant "$tid" -o none \
+        || { log_err "SP login from $sp_json failed"; return 1; }
+    else
+      log_err "az is not logged in (try: az login, OR set AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID, OR create $sp_json)"
+      return 1
+    fi
   fi
   if [[ -n "${CLUSTER_SUBSCRIPTION_ID:-}" ]]; then
     log_info "selecting az subscription: $CLUSTER_SUBSCRIPTION_ID"
