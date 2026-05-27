@@ -4,6 +4,22 @@ Self-managed OpenShift Container Platform on Azure VMs using the Azure UPI flow,
 
 This repository is a generic public runbook and infrastructure template. It assumes you bring an existing Azure VNet, DNS zone, Red Hat pull secret, `openshift-install`, and `oc`.
 
+## 👉 New to this repo? Start here
+
+If you are setting up a cluster from this template for the first time,
+the recommended path is the customer onboarding playbook:
+
+**→ [`docs/onboarding.md`](./docs/onboarding.md)**
+
+It walks you through the four one-time decisions (identity, installer
+host, jump-host access, outbound posture), the network setup, the
+preflight + install (`make preflight && make all`), the post-install
+fixes, and the day-2 lifecycle. Each phase links to a focused
+sub-document so you only read what you need.
+
+The rest of this README is reference: what the repo deploys, how it
+is laid out, and the original quick-start commands.
+
 ## What it deploys
 
 - Public DNS sub-zone delegation for the OpenShift base domain.
@@ -89,18 +105,20 @@ for the per-host tarball matrix.
 
 ## Quick start
 
+For a guided, end-to-end walkthrough see
+[`docs/onboarding.md`](./docs/onboarding.md). The condensed flow:
+
 1. Install host tools: Azure CLI, Terraform, `jq`, `make`, `perl`, `bash` (and `git`). See [Where to run the installer](#where-to-run-the-installer) for supported environments and `make tools` to download `openshift-install` and `oc`.
 2. Copy and edit configuration:
 
    ```bash
    cp config/cluster.example.env config/cluster.env
-   cp terraform/00-prereqs/terraform.tfvars.example terraform/00-prereqs/terraform.tfvars
-   cp terraform/01-network/terraform.tfvars.example terraform/01-network/terraform.tfvars
-   cp terraform/02-image/terraform.tfvars.example terraform/02-image/terraform.tfvars
-   cp terraform/03-bootstrap/terraform.tfvars.example terraform/03-bootstrap/terraform.tfvars
-   cp terraform/04-control-plane/terraform.tfvars.example terraform/04-control-plane/terraform.tfvars
-   cp terraform/05-workers/terraform.tfvars.example terraform/05-workers/terraform.tfvars
+   $EDITOR config/cluster.env
    ```
+
+   The unified `config/cluster.env` drives all Terraform stacks via
+   `scripts/render-tfvars-from-env.sh`; you no longer need to copy
+   each `terraform/*/terraform.tfvars.example` by hand.
 
 3. Add secrets locally:
 
@@ -118,7 +136,16 @@ for the per-host tarball matrix.
    az account set --subscription "$CLUSTER_SUBSCRIPTION_ID"
    ```
 
-5. Follow the full runbook in [`DEMO.md`](./DEMO.md).
+5. Validate prerequisites, then run the full install:
+
+   ```bash
+   make preflight     # checks Azure RBAC, quotas, network reach, DNS
+   make all           # full UPI install end-to-end
+   ```
+
+   For a step-by-step manual install (useful for debugging or
+   customising), follow [`docs/quickstart.md`](./docs/quickstart.md)
+   or the original [`DEMO.md`](./DEMO.md) runbook.
 
 ## Day-2 lifecycle (stop and restart the cluster)
 
