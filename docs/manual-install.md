@@ -10,10 +10,10 @@ The Terraform stages are intentionally separate so you can inspect and troublesh
 - Azure subscription access for the public parent DNS zone.
 - Existing VNet with enough free address space for the OpenShift subnets.
 - Existing `privatelink.blob.core.windows.net` private DNS zone reachable from the cluster VNet, or an equivalent private DNS design.
-- Azure CLI, Terraform, `jq`, `make`, `perl`, `bash`, `openshift-install`, and `oc`. The cluster's CPU architecture is independent of the host that runs this installer — see [README → Where to run the installer](README.md#where-to-run-the-installer) for supported host environments and [CPU-ARCHITECTURE.md → Host CPU vs cluster CPU](CPU-ARCHITECTURE.md#host-cpu-vs-cluster-cpu-they-are-independent) for the host-vs-cluster matrix. Use `make tools` to download matching `openshift-install` + `oc` binaries.
+- Azure CLI, Terraform, `jq`, `make`, `perl`, `bash`, `openshift-install`, and `oc`. The cluster's CPU architecture is independent of the host that runs this installer — see [README → Where to run the installer](../README.md#where-to-run-the-installer) for supported host environments and [cpu-architecture.md → Host CPU vs cluster CPU](cpu-architecture.md#host-cpu-vs-cluster-cpu-they-are-independent) for the host-vs-cluster matrix. Use `make tools` to download matching `openshift-install` + `oc` binaries.
 - Red Hat pull secret.
 - SSH keypair for RHCOS and helper VMs.
-- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [CPU-ARCHITECTURE.md](CPU-ARCHITECTURE.md).
+- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [cpu-architecture.md](cpu-architecture.md).
 
 ## Open items — confirm with your platform team
 
@@ -48,7 +48,7 @@ behalf and that causes confusing failures if mis-set.
    `docs/image-registry-options.md` (added in a separate PR).
 6. **Cluster scheduling for control-plane workloads.** Decide up front
    whether system workloads (image-registry, monitoring, ingress) are
-   allowed on masters. See [`SCHEDULING.md`](./SCHEDULING.md).
+   allowed on masters. See [`scheduling.md`](./scheduling.md).
 
 If you can't answer any of these in one sitting, that's the value of the
 checklist — pause and get the answer before burning a 90-minute install.
@@ -185,56 +185,15 @@ DNS resolves to the pre-created LB IP but TCP 443 hangs. Check
 after `make ingress-hostnetwork` (only the host-network listener on
 workers).
 
-## Multus macvlan validation
+## Multus / SR-IOV-style validation (optional)
 
-Check the secondary worker NIC name first:
+After install, you can validate Multus secondary networking with the
+macvlan demo and (if you provisioned the optional SR-IOV-style worker)
+the host-device demo.
 
-```bash
-oc get nodes -l node-role.kubernetes.io/worker -o name \
-  | xargs -I{} oc debug {} -- chroot /host ip -br a
-```
-
-If the secondary NIC is not `eth1`, update `manifests/multus/01-macvlan-nad.yaml`.
-On arm64 (Ampere Altra) the secondary NIC is usually named `enP*s1` — see
-[`docs/arm64-gotchas.md`](./docs/arm64-gotchas.md).
-
-Apply the demo. The namespace manifest **must be applied first** — it sets
-the `pod-security.kubernetes.io/enforce: privileged` labels that the
-macvlan CNI needs on OpenShift 4.14+ (default profile is `restricted`).
-We also need to grant the default service account access to the
-`privileged` SCC, the same step we do for the SR-IOV demo:
-
-```bash
-oc apply -f manifests/multus/00-namespace.yaml
-oc adm policy add-scc-to-user privileged -z default -n multus-demo
-oc apply -f manifests/multus/01-macvlan-nad.yaml
-oc apply -f manifests/multus/02-dualnic-pod.yaml
-oc -n multus-demo rollout status deploy/dualnic --timeout=5m
-oc -n multus-demo exec deploy/dualnic -- ip -br a
-```
-
-See [`manifests/multus/README.md`](./manifests/multus/README.md) for the
-full validation walk-through and cleanup steps.
-
-## Host-device / SR-IOV-style validation
-
-The optional SR-IOV-style worker uses Azure Accelerated Networking and Multus host-device CNI to move a dedicated NIC into a pod network namespace.
-
-Before applying the manifests:
-
-1. Confirm the SR-IOV-style worker is Ready.
-2. Confirm the dedicated NIC name inside RHCOS, default `eth2`.
-3. Confirm the static IP in `manifests/sriov/01-hostdevice-nad.yaml` matches the Azure-assigned NIC IP.
-
-```bash
-oc label node <sriov-worker-node> sriov.demo/capable=true
-oc apply -f manifests/sriov/00-namespace.yaml
-oc adm policy add-scc-to-user privileged -z default -n sriov-demo
-oc apply -f manifests/sriov/01-hostdevice-nad.yaml
-oc apply -f manifests/sriov/02-demo-pod.yaml
-oc -n sriov-demo wait --for=condition=Available deploy/sriov-demo --timeout=180s
-oc -n sriov-demo logs deploy/sriov-demo
-```
+See [`multus-validation.md`](./multus-validation.md) for the full
+walkthrough including PodSecurity, SCC, Whereabouts IPAM, and arm64
+NIC-name caveats.
 
 ## Teardown
 
@@ -255,7 +214,7 @@ make clean-install
 ## Pausing and restarting the cluster
 
 You don't have to destroy the cluster to save Azure compute. The day-2
-runbook in [`OPERATIONS.md`](./OPERATIONS.md) covers:
+runbook in [`operations.md`](./operations.md) covers:
 
 - `make etcd-backup` — snapshot etcd before any risky operation.
 - `make cluster-shutdown` — Red Hat graceful shutdown then `az vm deallocate`.
@@ -263,12 +222,12 @@ runbook in [`OPERATIONS.md`](./OPERATIONS.md) covers:
 - `make workers-down` / `make workers-up` — keep the control plane up and pause workers only.
 
 For unattended scheduled runs (overnight shutdown / morning startup via
-GitHub Actions, Linux cron, or systemd timers) see [`SCHEDULING.md`](./SCHEDULING.md).
+GitHub Actions, Linux cron, or systemd timers) see [`scheduling.md`](./scheduling.md).
 For Azure-native alternatives when GitHub Actions isn't an option (Azure
 Container Apps Jobs, Azure Automation + Linux Hybrid Worker, Functions,
-Azure DevOps Pipelines) see [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md).
+Azure DevOps Pipelines) see [`azure-automation.md`](./azure-automation.md).
 For the full CLI reference of every lifecycle script see
-[`docs/scripts/`](./docs/scripts/).
+[`scripts/`](./scripts/).
 
 The cluster can stay deallocated for up to ~1 year before the internal
 kube-apiserver-to-kubelet signer expires and manual CSR recovery is required.
@@ -284,7 +243,7 @@ tenants regardless of the customer.
    names the secondary NIC `enP*s1` rather than `eth1`. The macvlan demo
    manifest assumes `eth1`. Verify with
    `oc debug node/<worker> -- chroot /host ip -br a` before applying the
-   demo. See [`docs/arm64-gotchas.md`](./docs/arm64-gotchas.md).
+   demo. See [`arm64-gotchas.md`](./arm64-gotchas.md).
 2. **`publish: Internal` and the installer host.** This repo defaults to
    internal load balancers. That means the host that runs
    `openshift-install wait-for ... install-complete` and `oc` **must be
@@ -298,20 +257,20 @@ tenants regardless of the customer.
    must add the proxy CA chain to `install-config.yaml` via
    `additionalTrustBundle` and set `httpsProxy` / `noProxy` correctly.
    Otherwise the bootstrap node will hang trying to pull RHCOS or
-   release images. See `docs/proxy-and-tls-inspection.md` (added in a
-   separate PR) for the noProxy template.
+   release images. See [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md)
+   for the noProxy template.
 4. **Image-registry storage.** The image-registry operator tries to
    create its backing storage account by default. Tenant policies that
    block shared-key auth (`allowSharedKeyAccess=false`) will leave the
    operator in `Available=False, Degraded=True`. See
-   `docs/image-registry-options.md` for the three workarounds (Removed,
-   AAD/MI auth, pre-created storage account).
+   [`image-registry-options.md`](./image-registry-options.md) for the
+   three workarounds (Removed, AAD/MI auth, pre-created storage account).
 5. **Ingress LoadBalancerService vs pre-created internal LB.** If you
    pre-create an internal apps LB in Terraform, the default
    `IngressController` (LoadBalancerService type) will conflict and the
    `*.apps` route will not work until you patch the IngressController to
-   `HostNetwork`. See the post-install ingress step in DEMO.md (added in
-   a separate PR).
+   `HostNetwork`. See the post-install ingress section above
+   (`make ingress-hostnetwork`).
 6. **Lifecycle scripts need `oc` on PATH and an active `az`.** After
    `make tools`, copy `./oc` to a PATH location (or `export PATH=$PWD:$PATH`),
    and ensure `az` is logged in (or set

@@ -89,7 +89,7 @@ If you run the installer from an arm64 host (e.g. Apple silicon, an
 arm64 jump VM), `make tools` will fetch the matching `openshift-install`
 and `oc` binaries automatically. You can mix and match — an x86_64 jump
 VM can deploy an arm64 cluster and vice versa. See
-[CPU-ARCHITECTURE.md](../CPU-ARCHITECTURE.md) → *Host CPU vs cluster
+[cpu-architecture.md](./cpu-architecture.md) → *Host CPU vs cluster
 CPU*.
 
 ## 6. Mixed-architecture clusters

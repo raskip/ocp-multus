@@ -3,7 +3,7 @@
 > **TL;DR**
 >
 > If you cannot or don't want to use GitHub Actions or on-host cron
-> (`SCHEDULING.md`), the recommended Azure-native path is **Azure
+> (`scheduling.md`), the recommended Azure-native path is **Azure
 > Container Apps Jobs** triggered on a schedule. A solid alternative
 > for orgs with an existing Azure Automation control plane is **Azure
 > Automation + Linux Hybrid Worker**. This document covers both in
@@ -13,10 +13,10 @@
 
 This document is a companion to:
 
-- [`OPERATIONS.md`](./OPERATIONS.md) — what each script does.
-- [`SCHEDULING.md`](./SCHEDULING.md) — GitHub Actions, host cron, and
+- [`operations.md`](./operations.md) — what each script does.
+- [`scheduling.md`](./scheduling.md) — GitHub Actions, host cron, and
   systemd patterns.
-- [`docs/scripts/`](./docs/scripts/README.md) — per-script CLI reference.
+- [`docs/scripts/`](./scripts/README.md) — per-script CLI reference.
 
 ---
 
@@ -72,7 +72,7 @@ Everything else is in "Don't use these" further down.
 - **Org already runs everything through Azure Automation runbooks** →
   Automation + Hybrid Worker.
 - **Org already runs everything through Azure DevOps** → ADO
-  Pipelines (mirror the GHA pattern in `SCHEDULING.md`).
+  Pipelines (mirror the GHA pattern in `scheduling.md`).
 - **Need to chain into a wider Logic Apps / event-driven workflow** →
   Container Apps Job invoked over its REST start endpoint, fronted
   by whatever orchestrator you already have.
@@ -470,7 +470,7 @@ your worker, and stream output back to the Automation job log.
 
 Hybrid Worker is "a VM you own with an extension on it." If the only
 reason you'd stand up a Hybrid Worker VM is OCP lifecycle, the host
-cron / systemd timer pattern in `SCHEDULING.md` gives you the same
+cron / systemd timer pattern in `scheduling.md` gives you the same
 result with strictly less plumbing. The win is real only when the
 worker is shared with other automation.
 
@@ -636,7 +636,7 @@ container *can* run bash + `oc` + `az` on a schedule. Key tradeoffs:
 
 A scheduled `azure-pipelines.yml` running on a Microsoft-hosted Linux
 agent is the direct ADO analog of the GHA pattern in
-`SCHEDULING.md`. The shape is identical:
+`scheduling.md`. The shape is identical:
 
 ```yaml
 schedules:
@@ -778,8 +778,8 @@ fire on its own.
 
 ## Related
 
-- [`OPERATIONS.md`](./OPERATIONS.md) — runbook for every script.
-- [`SCHEDULING.md`](./SCHEDULING.md) — GitHub Actions, host cron,
+- [`operations.md`](./operations.md) — runbook for every script.
+- [`scheduling.md`](./scheduling.md) — GitHub Actions, host cron,
   systemd timers.
-- [`docs/scripts/`](./docs/scripts/README.md) — per-script CLI
+- [`docs/scripts/`](./scripts/README.md) — per-script CLI
   reference.

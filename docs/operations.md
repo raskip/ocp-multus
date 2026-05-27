@@ -13,9 +13,9 @@ cost without destroying it.
 > make cluster-startup    # az vm start + CSR approval + uncordon + wait healthy
 > ```
 >
-> For scheduled / unattended use see [`SCHEDULING.md`](./SCHEDULING.md).
-> For the full per-script command reference see [`docs/scripts/`](./docs/scripts/).
-> For CPU architecture choice (x86_64 vs arm64) see [`CPU-ARCHITECTURE.md`](./CPU-ARCHITECTURE.md).
+> For scheduled / unattended use see [`scheduling.md`](./scheduling.md).
+> For the full per-script command reference see [`docs/scripts/`](./scripts/).
+> For CPU architecture choice (x86_64 vs arm64) see [`cpu-architecture.md`](./cpu-architecture.md).
 
 Why not just `az vm deallocate`? Because OpenShift's control plane runs etcd,
 a distributed consensus store. Yanking power away from etcd VMs without first
@@ -125,7 +125,7 @@ What it does (full sequence):
 | `--force-deallocate-after-timeout` | If the in-OS shutdown didn't complete in time, deallocate anyway. **Accepts etcd corruption risk.** |
 | `--dry-run` | Print what would happen without changing anything. |
 
-See [`docs/scripts/cluster-shutdown.md`](./docs/scripts/cluster-shutdown.md) for examples.
+See [`docs/scripts/cluster-shutdown.md`](./scripts/cluster-shutdown.md) for examples.
 
 ## Fast shutdown (Azure deallocate only)
 
@@ -190,7 +190,7 @@ If the cluster has been down a long time (close to or past the cert expiry
 date), you may see many pending CSRs at startup. The auto-approver handles
 kubelet ones automatically; for anything else consult [Red Hat docs on certificate recovery](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/backup_and_restore/recovering-from-expired-control-plane-certificates).
 
-See [`docs/scripts/cluster-startup.md`](./docs/scripts/cluster-startup.md) for examples.
+See [`docs/scripts/cluster-startup.md`](./scripts/cluster-startup.md) for examples.
 
 ## Pausing workers only
 
@@ -209,7 +209,7 @@ not be hard-deallocated. The SR-IOV worker is included in the worker set.
 Use `bash scripts/cluster-scale-workers.sh status` to see worker VM state
 and node Ready/SchedulingDisabled together.
 
-See [`docs/scripts/cluster-scale-workers.md`](./docs/scripts/cluster-scale-workers.md).
+See [`docs/scripts/cluster-scale-workers.md`](./scripts/cluster-scale-workers.md).
 
 ## Status snapshot
 
@@ -226,7 +226,7 @@ Prints:
 - `etcdctl endpoint health --cluster`.
 - Certificate expiry (`kube-apiserver-to-kubelet-signer`).
 
-Read-only; safe to run at any time. See [`docs/scripts/cluster-status.md`](./docs/scripts/cluster-status.md).
+Read-only; safe to run at any time. See [`docs/scripts/cluster-status.md`](./scripts/cluster-status.md).
 
 ## Backups
 
@@ -251,7 +251,7 @@ procedure. This script is intentionally not in scope here — etcd restore is a
 sensitive operation that should be done manually with full awareness of what's
 about to happen to the cluster.
 
-See [`docs/scripts/cluster-etcd-backup.md`](./docs/scripts/cluster-etcd-backup.md).
+See [`docs/scripts/cluster-etcd-backup.md`](./scripts/cluster-etcd-backup.md).
 
 ## End-to-end walkthrough
 
@@ -433,14 +433,14 @@ A fresh `make cluster-status` should now show everything green again.
 ## Scheduling / automation
 
 For unattended scheduled runs (overnight shutdown, morning startup) see
-[`SCHEDULING.md`](./SCHEDULING.md). It covers:
+[`scheduling.md`](./scheduling.md). It covers:
 
 - The recommended GitHub Actions two-workflow pattern (separate shutdown and startup workflows on cron triggers).
 - Linux/macOS `cron` with a wrapper script that handles locking and logging.
 - `systemd` timer + service unit examples.
 
 If you can't use GitHub Actions (org policy, no GitHub access, Azure-only
-control plane), see [`AZURE-AUTOMATION.md`](./AZURE-AUTOMATION.md) for
+control plane), see [`azure-automation.md`](./azure-automation.md) for
 Azure-native alternatives: Container Apps Jobs (recommended default),
 Azure Automation + Linux Hybrid Worker, plus Functions and Azure DevOps
 Pipelines at a glance.

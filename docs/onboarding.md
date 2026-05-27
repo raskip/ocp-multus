@@ -5,7 +5,8 @@ up an OpenShift cluster from this repo for the first time. Each phase
 links to a focused doc; finish a phase before moving to the next.
 
 If you are already familiar with UPI installs and just want the
-mechanics, skip to **Phase 2** and follow `make preflight && make all`.
+mechanics, skip to **Phase 2** and follow `make preflight && make all`,
+or read [`quickstart.md`](./quickstart.md) for the condensed flow.
 
 ## Phase 0 — One-time decisions
 
@@ -93,7 +94,8 @@ but you should know what they do in case you need to re-run them:
   manifests in `manifests/multus/` need PodSecurity Admission labels
   on OpenShift 4.14+. The manifests already include them; if you
   re-render or modify them, keep the `pod-security.kubernetes.io/*`
-  labels intact.
+  labels intact. See [`multus-validation.md`](./multus-validation.md)
+  for the full walk-through when you want to run the demo (Phase 6).
 - **Ingress via HostNetwork** — When the cluster is internal-only,
   the default ingress requires a pre-created internal apps LB. The
   install handles this; if you customise the topology, read
@@ -113,13 +115,13 @@ but you should know what they do in case you need to re-run them:
 `make cluster-shutdown` does a **graceful** stop: drain → in-OS
 shutdown → Azure deallocate. **Do not just deallocate VMs in the
 Azure portal** — that corrupts etcd. See
-[`OPERATIONS.md`](../OPERATIONS.md) for the cost model, prerequisites,
+[`operations.md`](./operations.md) for the cost model, prerequisites,
 troubleshooting, and end-to-end walkthrough. Per-script CLI reference
 lives in [`docs/scripts/`](./scripts/).
 
 For unattended / scheduled execution see
-[`SCHEDULING.md`](../SCHEDULING.md) (GitHub Actions, Linux cron,
-systemd timers) and [`AZURE-AUTOMATION.md`](../AZURE-AUTOMATION.md)
+[`scheduling.md`](./scheduling.md) (GitHub Actions, Linux cron,
+systemd timers) and [`azure-automation.md`](./azure-automation.md)
 (Container Apps Jobs, Azure Automation + Hybrid Worker, Functions,
 Azure DevOps).
 
@@ -129,14 +131,40 @@ Azure DevOps).
 |---|---|
 | arm64 vs x86_64 gotchas | [`arm64-gotchas.md`](./arm64-gotchas.md) |
 | Service principal vs managed identity details | [`azure-credentials.md`](./azure-credentials.md) |
-| Architecture diagrams | [`../ARCHITECTURE.md`](../ARCHITECTURE.md), [`../ARCHITECTURE-ASCII.md`](../ARCHITECTURE-ASCII.md) |
-| CPU architecture mapping | [`../CPU-ARCHITECTURE.md`](../CPU-ARCHITECTURE.md) |
-| Full operations runbook | [`../OPERATIONS.md`](../OPERATIONS.md) |
-| Original install walkthrough | [`../DEMO.md`](../DEMO.md) |
+| Architecture diagrams | [`architecture.md`](./architecture.md), [`architecture-ascii.md`](./architecture-ascii.md) |
+| CPU architecture mapping | [`cpu-architecture.md`](./cpu-architecture.md) |
+| Full operations runbook | [`operations.md`](./operations.md) |
+| Manual install walkthrough (per `make` target) | [`manual-install.md`](./manual-install.md) |
+| Quickstart (UPI-veteran condensed flow) | [`quickstart.md`](./quickstart.md) |
+
+## Phase 6 — Multus secondary-network validation (optional)
+
+This repo is named `ocp-multus` because its original purpose was to
+demo Multus secondary pod networking on stock Azure VMs. After your
+cluster is `Ready`, you can validate that the secondary networking is
+wired correctly end-to-end with two demos:
+
+- **macvlan** — attaches a virtual interface on top of each worker's
+  secondary NIC (`snet-ocp-multus` subnet), assigns pod IPs via
+  Whereabouts IPAM, and runs a two-NIC verification pod.
+- **host-device / SR-IOV-style** — moves a dedicated NIC into a pod
+  network namespace on the optional SR-IOV-style worker (when
+  `enable_sriov_worker=true`).
+
+Both demos require the **`privileged` SCC** and a namespace with the
+`privileged` PodSecurity profile (required for the macvlan / host-device
+CNI plugins to manipulate host NICs from inside the pod network
+namespace).
+
+**→ [`multus-validation.md`](./multus-validation.md)** for the full
+walk-through (prereqs, NIC-name confirmation, Whereabouts IPAM, arm64
+gotchas, cleanup).
+
+Skip this phase if the cluster does not need secondary pod NICs.
 
 ## What "this works" looks like
 
-When all five phases complete cleanly, you have:
+When all six phases complete cleanly, you have:
 
 - A self-managed OpenShift 4.x cluster on Azure VMs, internal-LB
   publishing topology by default.
@@ -147,6 +175,8 @@ When all five phases complete cleanly, you have:
 - A reproducible install: the same `config/cluster.env` plus the same
   network prereqs produces the same cluster on a different
   subscription.
+- (If you ran Phase 6) A working Multus secondary-network demo, proving
+  that pods can attach to a second pod NIC backed by your Azure subnet.
 
 If any phase fails, the relevant doc has a troubleshooting section.
 Open an issue on the upstream repo with the failing phase, the

@@ -17,7 +17,7 @@
 #
 # Important: the host CPU you run this script on only affects which TARBALL is
 # downloaded. The deployed OpenShift cluster's CPU is independent and is
-# controlled by ARCHITECTURE in config/cluster.env. See CPU-ARCHITECTURE.md.
+# controlled by ARCHITECTURE in config/cluster.env. See CPU-docs/architecture.md.
 #
 # Requires: bash, curl, tar (gzip-aware).
 set -euo pipefail

@@ -3,7 +3,7 @@
 This repository can deploy OpenShift on Azure on either **x86_64** (Intel
 Ice Lake D*s_v5) or **arm64** (Ampere Altra D*ps_v5) VMs. The
 architecture is controlled by a single setting in
-[`config/cluster.env`](./config/cluster.example.env):
+[`config/cluster.env`](../config/cluster.example.env):
 
 ```bash
 ARCHITECTURE=x86_64   # default
@@ -54,7 +54,7 @@ bash scripts/fetch-openshift-tools.sh --force   # re-download even if present
 ```
 
 The helper detects the host with `uname` and downloads the matching
-tarballs. See [README.md → Where to run the installer](./README.md#where-to-run-the-installer)
+tarballs. See [README.md → Where to run the installer](../README.md#where-to-run-the-installer)
 for the full list of supported host environments.
 
 > Windows note: there is **no** native-Windows `openshift-install`

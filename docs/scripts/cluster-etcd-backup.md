@@ -88,4 +88,4 @@ procedure manually.
 
 - [`cluster-shutdown.sh`](./cluster-shutdown.md) — calls this automatically before deallocate.
 - [`cluster-status.sh`](./cluster-status.md)
-- [`OPERATIONS.md`](../../OPERATIONS.md)
+- [`operations.md`](../operations.md)

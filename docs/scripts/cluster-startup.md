@@ -2,7 +2,7 @@
 
 Bring a gracefully shut down cluster back up: start VMs, approve kubelet
 CSRs, uncordon, and wait until everything is healthy. See
-[`OPERATIONS.md`](../../OPERATIONS.md) for the full operating model.
+[`operations.md`](../operations.md) for the full operating model.
 
 ## Synopsis
 
@@ -81,5 +81,5 @@ bash scripts/cluster-startup.sh --dry-run
 
 - [`cluster-shutdown.sh`](./cluster-shutdown.md)
 - [`cluster-status.sh`](./cluster-status.md)
-- [`OPERATIONS.md`](../../OPERATIONS.md)
-- [`SCHEDULING.md`](../../SCHEDULING.md)
+- [`operations.md`](../operations.md)
+- [`scheduling.md`](../scheduling.md)

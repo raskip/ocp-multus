@@ -2,7 +2,7 @@
 
 Gracefully shut down a self-managed OpenShift cluster on Azure VMs and
 `az vm deallocate` the cluster compute. See
-[`OPERATIONS.md`](../../OPERATIONS.md) for the full operating model.
+[`operations.md`](../operations.md) for the full operating model.
 
 ## Synopsis
 
@@ -94,5 +94,5 @@ bash scripts/cluster-shutdown.sh --dry-run --yes
 - [`cluster-etcd-backup.sh`](./cluster-etcd-backup.md)
 - [`cluster-scale-workers.sh`](./cluster-scale-workers.md)
 - [`cluster-status.sh`](./cluster-status.md)
-- [`OPERATIONS.md`](../../OPERATIONS.md)
-- [`SCHEDULING.md`](../../SCHEDULING.md)
+- [`operations.md`](../operations.md)
+- [`scheduling.md`](../scheduling.md)

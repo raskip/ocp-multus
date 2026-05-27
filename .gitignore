@@ -58,3 +58,5 @@ config/cluster.env
 backups/*
 !backups/
 !backups/.gitkeep
+
+files/

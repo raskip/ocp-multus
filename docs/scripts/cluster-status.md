@@ -72,4 +72,4 @@ make cluster-status
 - [`cluster-shutdown.sh`](./cluster-shutdown.md)
 - [`cluster-startup.sh`](./cluster-startup.md)
 - [`cluster-scale-workers.sh`](./cluster-scale-workers.md)
-- [`OPERATIONS.md`](../../OPERATIONS.md)
+- [`operations.md`](../operations.md)

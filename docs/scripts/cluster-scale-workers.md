@@ -86,4 +86,4 @@ bash scripts/cluster-scale-workers.sh down --dry-run --yes
 - [`cluster-shutdown.sh`](./cluster-shutdown.md) — full cluster including masters.
 - [`cluster-startup.sh`](./cluster-startup.md)
 - [`cluster-status.sh`](./cluster-status.md)
-- [`OPERATIONS.md`](../../OPERATIONS.md)
+- [`operations.md`](../operations.md)

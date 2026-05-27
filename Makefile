@@ -1,5 +1,5 @@
 # OpenShift on Azure - UPI Multus demo Makefile
-# Usage: make <target>   (see DEMO.md for the full runbook)
+# Usage: make <target>   (see docs/manual-install.md for the full runbook)
 
 SHELL := /bin/bash
 TF    ?= terraform
@@ -29,7 +29,7 @@ help:
 
 # Download matching openshift-install + oc for the current host (autodetected
 # with uname). Override via OCP_VERSION (default: stable-4.18). Independent of
-# the cluster's CPU architecture (see CPU-ARCHITECTURE.md).
+# the cluster's CPU architecture (see CPU-docs/architecture.md).
 tools:
 	@bash scripts/fetch-openshift-tools.sh
 
@@ -127,7 +127,7 @@ wait-install:
 	@bash scripts/wait-install.sh
 
 # ---- One-command install ----
-# `make all` walks the canonical install order from DEMO.md and is safe
+# `make all` walks the canonical install order from docs/manual-install.md and is safe
 # to re-run (every target is idempotent). Set YES=1 to skip the cost prompt.
 _cost-prompt:
 	@if [[ "$$YES" != "1" ]]; then \
@@ -144,7 +144,7 @@ all: _cost-prompt verify tfvars prereqs network ignition image bootstrap control
 all-yes:
 	@$(MAKE) YES=1 all
 
-# ---- Day-2 cluster lifecycle (see OPERATIONS.md) ----
+# ---- Day-2 cluster lifecycle (see docs/operations.md) ----
 # B44: env-var overrides so callers can pass extra flags to lifecycle
 # scripts via make. Examples:
 #   make cluster-shutdown SHUTDOWN_FLAGS="--no-backup --yes"
@@ -168,7 +168,7 @@ cluster-status:     ; bash scripts/cluster-status.sh $(STATUS_FLAGS)
 # Patch the default IngressController to HostNetwork. Use when this repo's
 # terraform/01-network/ pre-creates an internal apps LB (lb-ingress-internal-*)
 # with workers in its backend pool — the default LoadBalancerService strategy
-# would provision a second LB and conflict. See DEMO.md "Post-install ingress
+# would provision a second LB and conflict. See docs/manual-install.md "Post-install ingress
 # step" for the full explanation.
 ingress-hostnetwork:
 	@bash scripts/ingress-hostnetwork.sh

@@ -4,8 +4,8 @@ One page per lifecycle script. Each page lists the synopsis, full flag
 set, environment variables, examples, and exit codes for that script.
 
 For the operational story (when to use which, cost model, full
-walkthrough) see [`OPERATIONS.md`](../../OPERATIONS.md). For unattended
-scheduled runs see [`SCHEDULING.md`](../../SCHEDULING.md).
+walkthrough) see [`operations.md`](../operations.md). For unattended
+scheduled runs see [`scheduling.md`](../scheduling.md).
 
 | Script | Purpose |
 |---|---|

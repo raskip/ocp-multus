@@ -1,6 +1,6 @@
 # Architecture (ASCII)
 
-Plain-text companion to [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+Plain-text companion to [`architecture.md`](./architecture.md).
 
 ```text
 Public DNS parent zone
@@ -97,5 +97,5 @@ value (VF discovery, NIC partitioning, DPDK driver binding) can't be
 exercised on Azure VM nodes. Multus host-device CNI moves a whole NIC
 into a pod's network namespace, which gives the same line-rate /
 no-encap data path with much less operational complexity. See
-[ARCHITECTURE.md](./ARCHITECTURE.md) for the mermaid version of this
+[architecture.md](./architecture.md) for the mermaid version of this
 view.

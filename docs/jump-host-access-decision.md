@@ -115,4 +115,4 @@ bash examples/jump-host-access/<pattern>/99-cleanup.sh
   needs in terms of reach + RBAC + filesystem state.
 - `docs/network-prereqs.md` — VNet / subnet / NSG prerequisites
   (added by `learnings/byo-network-mode`).
-- `DEMO.md` — full per-target runbook.
+- `manual-install.md` — full per-target runbook.
