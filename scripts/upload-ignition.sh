@@ -9,6 +9,15 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_DIR="$REPO_ROOT/install"
 BOOTSTRAP_IGN="$INSTALL_DIR/bootstrap.ign"
 
+# Source config/cluster.env so CLUSTER_SUBSCRIPTION_ID and friends are
+# available without the caller having to `set -a; source ...` first.
+if [[ -f "$REPO_ROOT/config/cluster.env" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$REPO_ROOT/config/cluster.env"
+  set +a
+fi
+
 [[ -f "$BOOTSTRAP_IGN" ]] || { echo "missing $BOOTSTRAP_IGN (run: make ignition)"; exit 1; }
 
 cd "$REPO_ROOT/terraform/00-prereqs"

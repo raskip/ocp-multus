@@ -7,6 +7,15 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Source config/cluster.env so CLUSTER_SUBSCRIPTION_ID and friends are
+# available without the caller having to `set -a; source ...` first.
+if [[ -f "$REPO_ROOT/config/cluster.env" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$REPO_ROOT/config/cluster.env"
+  set +a
+fi
+
 cd "$REPO_ROOT/terraform/00-prereqs"
 SA_NAME=$(terraform output -raw storage_account_name)
 CONTAINER=$(terraform output -raw rhcos_container_name)

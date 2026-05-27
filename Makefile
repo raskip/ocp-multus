@@ -7,11 +7,19 @@ INSTALLER := $(CURDIR)/openshift-install
 OC        := $(CURDIR)/oc
 INSTALL_DIR := $(CURDIR)/install
 
+# Auto-load config/cluster.env so every recipe (including the existing
+# upload-rhcos / upload-ignition / fetch-openshift-tools scripts) sees
+# CLUSTER_SUBSCRIPTION_ID, ARCHITECTURE, etc. Silent if the file does not
+# exist yet (e.g. before `make init-config`).
+-include config/cluster.env
+export
+
 .PHONY: help verify prereqs network upload-rhcos image install-config ignition \
-        tfvars tools preflight \
+        tfvars tools preflight init-config \
         upload-ignition bootstrap control-plane destroy-bootstrap workers \
         destroy-workers destroy-control-plane destroy-image destroy-network \
         destroy-prereqs destroy clean-install \
+        wait-bootstrap approve-csrs wait-install all all-yes _cost-prompt \
         etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
         workers-down workers-up cluster-status \
         ingress-hostnetwork image-registry-removed
@@ -42,10 +50,18 @@ preflight:
 	@bash scripts/preflight-checks.sh
 
 # ---- Terraform stages ----
-# tfvars renders ARCHITECTURE + VM sizes from config/cluster.env into each
-# stack as *.auto.tfvars (gitignored) so cluster.env is the single source of truth.
+# tfvars renders ARCHITECTURE + VM sizes (render-tfvars.sh) AND every
+# per-stack static field that is sourced from config/cluster.env
+# (render-tfvars-from-env.sh) so cluster.env is the single source of truth.
 tfvars: verify
 	@bash scripts/render-tfvars.sh
+	@bash scripts/render-tfvars-from-env.sh
+
+# Interactive wizard that creates config/cluster.env. Has NO dependency on
+# `verify` because it creates the file that verify checks for. Pass --force
+# to overwrite an existing cluster.env.
+init-config:
+	@bash scripts/init-config.sh $(if $(FORCE),--force,)
 
 prereqs:           ; cd terraform/00-prereqs        && $(TF) init && $(TF) apply -auto-approve
 network:           tfvars
@@ -75,6 +91,7 @@ install-config: verify
 	@bash scripts/render-install-config.sh
 
 ignition: install-config
+	@mkdir -p $(INSTALL_DIR)
 	@rm -rf $(INSTALL_DIR)/manifests $(INSTALL_DIR)/openshift $(INSTALL_DIR)/*.ign $(INSTALL_DIR)/auth || true
 	@cp install-config/install-config.yaml $(INSTALL_DIR)/install-config.yaml
 	@$(INSTALLER) --dir=$(INSTALL_DIR) create manifests
@@ -85,6 +102,47 @@ ignition: install-config
 
 clean-install:
 	@rm -rf $(INSTALL_DIR)
+
+# ---- Install completion helpers ----
+# wait-bootstrap blocks until the bootstrap-complete signal is issued by
+# the temporary bootstrap VM (~25-35 min after `make bootstrap` succeeds).
+wait-bootstrap:
+	@$(INSTALLER) --dir=$(INSTALL_DIR) wait-for bootstrap-complete --log-level=info
+
+# approve-csrs makes a single pass over pending CSRs and approves them
+# (workers need two CSRs each: client + serving). Run this manually any
+# time `oc get csr` shows Pending rows.
+approve-csrs:
+	@pending=$$( "$(OC)" get csr -o json 2>/dev/null | jq -r '.items[]|select(.status.conditions==null)|.metadata.name' ); \
+	if [[ -n "$$pending" ]]; then \
+	  echo "$$pending" | xargs -r "$(OC)" adm certificate approve; \
+	else \
+	  echo "no pending CSRs"; \
+	fi
+
+# wait-install backgrounds a CSR-approver loop and waits for
+# install-complete in the foreground. The background loop is killed when
+# the foreground command exits.
+wait-install:
+	@bash scripts/wait-install.sh
+
+# ---- One-command install ----
+# `make all` walks the canonical install order from DEMO.md and is safe
+# to re-run (every target is idempotent). Set YES=1 to skip the cost prompt.
+_cost-prompt:
+	@if [[ "$$YES" != "1" ]]; then \
+	  printf '\nAbout to provision Azure resources for cluster %s in %s.\n' "$$CLUSTER_NAME" "$$LOCATION"; \
+	  printf 'Estimated cost while running: ~$$500-800/month; parked: ~$$30-50/month.\n'; \
+	  printf 'Press Enter to continue, Ctrl-C to abort. '; \
+	  read -r _; \
+	fi
+
+all: _cost-prompt verify tfvars prereqs network ignition image bootstrap control-plane wait-bootstrap destroy-bootstrap workers wait-install
+	@echo
+	@echo "Cluster install complete. Run 'make cluster-status' for a summary."
+
+all-yes:
+	@$(MAKE) YES=1 all
 
 # ---- Day-2 cluster lifecycle (see OPERATIONS.md) ----
 # B44: env-var overrides so callers can pass extra flags to lifecycle
