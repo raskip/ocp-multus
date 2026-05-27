@@ -12,8 +12,7 @@ openshift-client-mac.tar.gz
 openshift-client-mac-arm64.tar.gz
 
 # Secrets
-secrets/
-!secrets/
+secrets/*
 !secrets/.gitkeep
 *.pem
 *.key
