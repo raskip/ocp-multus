@@ -8,7 +8,7 @@ OC        := $(CURDIR)/oc
 INSTALL_DIR := $(CURDIR)/install
 
 .PHONY: help verify prereqs network upload-rhcos image install-config ignition \
-        tfvars tools \
+        tfvars tools preflight \
         upload-ignition bootstrap control-plane destroy-bootstrap workers \
         destroy-workers destroy-control-plane destroy-image destroy-network \
         destroy-prereqs destroy clean-install \
@@ -32,6 +32,14 @@ verify:
 	@test -f config/cluster.env || (echo "ERROR: config/cluster.env missing (copy config/cluster.example.env)" && exit 1)
 	@test -f secrets/pull-secret.txt || (echo "ERROR: secrets/pull-secret.txt missing" && exit 1)
 	@test -f secrets/id_ed25519.pub || (echo "ERROR: secrets/id_ed25519.pub missing (run: ssh-keygen -t ed25519 -f secrets/id_ed25519 -N '')" && exit 1)
+
+# Read-only Azure-side prerequisite checks. Catches misconfigured RBAC,
+# missing VNet, weak NSG rules, missing UDR attach, insufficient vCPU
+# quota, missing DNS delegation permission, broken peering, missing
+# firewall policy, and a malformed osServicePrincipal.json before they
+# turn into cryptic Terraform apply errors. See docs/preflight-checklist.md.
+preflight:
+	@bash scripts/preflight-checks.sh
 
 # ---- Terraform stages ----
 # tfvars renders ARCHITECTURE + VM sizes from config/cluster.env into each
