@@ -31,7 +31,7 @@ Image-registry storage decision   | minutes                          | days (sec
 Jump-host access pattern          | minutes (A direct PIP)           | days (B/C/D + change ticket)
 Source IP (`ADMIN_SSH_SOURCE_IP`) | `curl ifconfig.me`               | ask IT for VPN exit CIDR
 OpenShift version pin             | minutes (pick `stable-4.18`)     | days (security approves channel)
-Subscription IDs (1–3 different)  | minutes (`az account list`)      | minutes (often need to ask 3 owners)
+Subscription IDs (workload + public + private DNS) | minutes (`az account list`) | minutes (often need to ask 3 owners)
 Cost approval (~$500–800/mo)      | self-approve                     | finance / business case
 ```
 
@@ -55,7 +55,7 @@ overlap, **4–6 weeks** if items have to go sequentially.
 | 11 | Jump-host access pattern (A/B/C/D) | network-security team | days | Decide before `make prereqs`. A = direct PIP (often blocked), B = hub-FW DNAT, C = Azure Bastion, D = private-only via VPN/ExpressRoute. | [`jump-host-access-decision.md`](./jump-host-access-decision.md), [`installer-host-requirements.md`](./installer-host-requirements.md) |
 | 12 | `ADMIN_SSH_SOURCE_IP` (your egress IP / VPN exit CIDR) | self or IT | minutes | `curl ifconfig.me` for personal, or ask IT for the corporate VPN exit CIDR. Used in NSG inbound rule on the uploader/jump VM. | [`config/cluster.example.env` line 55](../config/cluster.example.env) |
 | 13 | OpenShift channel / version | self (+ security sign-off) | minutes | Default is `stable-4.18`. Override with `OCP_VERSION=stable-4.19 make tools`. Make a deliberate choice before downloading binaries. | [`README.md` "Where to run the installer"](../README.md) |
-| 14 | Subscription IDs (cluster, DNS, private DNS) | self | minutes | `az account list -o table`. Cluster + DNS + private-DNS can all be the same sub (`f54...`) or three different subs in a hub-spoke layout. Document them in `config/cluster.env` (`CLUSTER_SUBSCRIPTION_ID`, `DNS_SUBSCRIPTION_ID`, `PRIVATE_DNS_SUBSCRIPTION_ID`). | [`config/cluster.example.env` line 47–52](../config/cluster.example.env) |
+| 14 | Subscription IDs (workload + public DNS zone owner + private DNS zone owner) | self | minutes | `az account list -o table`. The three env vars in `config/cluster.env` map to three **DNS/identity scopes** — not "cluster + connectivity + ???". `CLUSTER_SUBSCRIPTION_ID` = workload VMs/VNet/RG. `DNS_SUBSCRIPTION_ID` = owner of the public parent zone (often a central corp-IT sub). `PRIVATE_DNS_SUBSCRIPTION_ID` = owner of `privatelink.blob.core.windows.net` (often co-located with a connectivity/hub sub, but conceptually a separate scope). **Single-subscription sandbox: set all three vars to the same UUID.** Connectivity/hub subscription (if you peer to a hub VNet) is **not** a separate env var — it is consumed via subnet ARM IDs in BYO-network mode (each `/subscriptions/<UUID>/...` subnet ID embeds the hub sub UUID); see [`network-prereqs.md` §6](./network-prereqs.md#6-vnet-peering). | [`config/cluster.example.env` line 47–52](../config/cluster.example.env) |
 | 15 | Cost approval | finance / self | varies | Running cluster ~$500–800 / month (3 × D8s_v5 control plane + 2–3 × D4s_v5 workers + storage + LBs + IPs). Parked (deallocated) ~$30–50 / month. Optional Azure Bastion ~$140 / month. Install duration: 60–90 minutes. | [`operations.md` "Cost model"](./operations.md) |
 
 ## Quick-wins for the impatient
@@ -63,8 +63,10 @@ overlap, **4–6 weeks** if items have to go sequentially.
 If you have a **greenfield Azure sandbox subscription** that you fully
 own, you only need rows **1, 2, 5, 12, 14** to start a PoC today —
 Terraform creates the network, parent DNS zone delegation can wait
-until row 6, and the rest are post-PoC concerns. The full guided
-flow is [`onboarding.md`](./onboarding.md); the condensed commands are
+until row 6, and the rest are post-PoC concerns. Row 14 in a
+single-sub PoC is just pasting the same UUID into all three env
+vars — takes 10 seconds. The full guided flow is
+[`onboarding.md`](./onboarding.md); the condensed commands are
 [`quickstart.md`](./quickstart.md).
 
 ## Cost callouts
