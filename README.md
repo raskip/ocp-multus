@@ -81,7 +81,7 @@ The default topology is internal: `publish: Internal`.
 ## Where to run the installer
 
 The installer runs anywhere with `bash` ≥ 4, `make`, `jq`, `az`
-(Azure CLI), `terraform` ≥ 1.5, and a working `az login`. Run
+(Azure CLI), `terraform` ≥ 1.6, and a working `az login`. Run
 `make verify` to auto-check all of these before you start. Your
 laptop's CPU does **not** dictate the cluster's CPU — see
 [`docs/cpu-architecture.md` → Host CPU vs cluster CPU](./docs/cpu-architecture.md#host-cpu-vs-cluster-cpu-they-are-independent).

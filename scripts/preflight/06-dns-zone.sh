@@ -86,6 +86,9 @@ fi
 # base_domain as a child zone).
 if [[ -n "$BASE_DOMAIN_FROM_TF" && "$BASE_DOMAIN_FROM_TF" == "$PARENT_ZONE" ]]; then
   pf_warn "base_domain == parent_dns_zone ($PARENT_ZONE): the current terraform/00-prereqs/main.tf would try to create the parent zone again — see docs/network-prereqs.md for the 'one cluster per parent zone' pattern"
+elif [[ -n "$BASE_DOMAIN_FROM_TF" && "$BASE_DOMAIN_FROM_TF" != *."$PARENT_ZONE" ]]; then
+  pf_fail "base_domain ($BASE_DOMAIN_FROM_TF) is not a child sub-zone of parent_dns_zone ($PARENT_ZONE)"
+  pf_info "fix: set BASE_DOMAIN to a child zone, for example ocp.$PARENT_ZONE"
 fi
 
 # B62 awareness: warn if USE_LEGACY_DNS_LAYOUT=true. The legacy layout

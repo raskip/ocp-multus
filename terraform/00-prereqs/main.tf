@@ -26,6 +26,13 @@ resource "azurerm_dns_ns_record" "delegation" {
   ttl                 = 3600
   records             = azurerm_dns_zone.public_subzone.name_servers
   tags                = var.tags
+
+  lifecycle {
+    precondition {
+      condition     = var.base_domain != var.parent_dns_zone && endswith(var.base_domain, ".${var.parent_dns_zone}")
+      error_message = "base_domain must be a child sub-zone of parent_dns_zone, for example base_domain=ocp.example.com and parent_dns_zone=example.com."
+    }
+  }
 }
 
 #-----------------------------------------------------------------------------

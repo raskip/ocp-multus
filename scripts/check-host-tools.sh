@@ -11,7 +11,7 @@
 #   make       (any GNU make)
 #   jq         (any version — used in 20+ scripts to parse Azure / OCP JSON)
 #   az         (Azure CLI — any reasonably recent version)
-#   terraform  >= 1.5
+#   terraform  >= 1.6
 #
 # `openshift-install` and `oc` are intentionally NOT checked here; they
 # are downloaded by `make tools` (not necessarily present yet) and the
@@ -31,7 +31,7 @@
 set -u
 
 REQ_BASH_MIN="4"
-REQ_TERRAFORM_MIN="1.5"
+REQ_TERRAFORM_MIN="1.6"
 
 # Track failures across the script.
 fail=0

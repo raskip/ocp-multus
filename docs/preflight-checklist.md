@@ -33,8 +33,10 @@ OpenShift Azure UPI needs credentials twice:
 - **Cluster runtime** — cloud-controller-manager, ingress-operator,
   cloud-credential-operator, image-registry, machine-api all call ARM
   to create load balancers, public IPs, NSG rules, storage accounts,
-  etc. **Contributor on the workload RG** plus **Network Contributor on
-  the VNet RG** is the recommended least-privilege scope.
+  etc. **Contributor on the workload RG**, **Network Contributor on
+  the VNet RG**, and **Private DNS Zone Contributor** on the RG/zone
+  that holds `privatelink.blob.core.windows.net` are the recommended
+  least-privilege scopes.
 
 See [`azure-identity-options.md`](./azure-identity-options.md) for the
 five identity patterns (sub-scoped SP, RG-scoped SP, Manual cloud-cred

@@ -41,8 +41,14 @@ ssh_pub_path="$REPO_ROOT/$SSH_PUBLIC_KEY_FILE"
 
 [[ -f "$pull_secret_path" ]] || { echo "missing $pull_secret_path"; exit 1; }
 [[ -f "$ssh_pub_path" ]] || { echo "missing $ssh_pub_path"; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "missing jq (required to validate Red Hat pull secret JSON)"; exit 1; }
 
-PULL_SECRET="$(tr -d '\n' < "$pull_secret_path")"
+if ! jq -e '.auths and (.auths | type == "object") and ((.auths | length) > 0)' "$pull_secret_path" >/dev/null 2>&1; then
+  echo "invalid Red Hat pull secret: $pull_secret_path must be JSON with a non-empty .auths object" >&2
+  exit 1
+fi
+
+PULL_SECRET="$(tr -d '\r\n' < "$pull_secret_path")"
 SSH_PUB="$(cat "$ssh_pub_path")"
 
 # Substitute __VAR__ placeholders in the template using pure bash parameter

@@ -40,6 +40,7 @@ verify:
 	@az account show --query '{name:name,id:id}' -o table
 	@test -f config/cluster.env || (echo "ERROR: config/cluster.env missing (copy config/cluster.example.env)" && exit 1)
 	@test -f secrets/pull-secret.txt || (echo "ERROR: secrets/pull-secret.txt missing" && exit 1)
+	@jq -e '.auths and (.auths | type == "object") and ((.auths | length) > 0)' secrets/pull-secret.txt >/dev/null || (echo "ERROR: secrets/pull-secret.txt is not a valid Red Hat pull secret JSON with a non-empty .auths object" && exit 1)
 	@test -f secrets/id_ed25519.pub || (echo "ERROR: secrets/id_ed25519.pub missing (run: ssh-keygen -t ed25519 -f secrets/id_ed25519 -N '')" && exit 1)
 
 # Read-only Azure-side prerequisite checks. Catches misconfigured RBAC,
@@ -75,7 +76,8 @@ tfvars-refresh:
 init-config:
 	@bash scripts/init-config.sh $(if $(FORCE),--force,)
 
-prereqs:           ; cd terraform/00-prereqs        && $(TF) init && $(TF) apply -auto-approve
+prereqs:           tfvars
+	cd terraform/00-prereqs        && $(TF) init && $(TF) apply -auto-approve
 # network depends on tfvars-refresh so the route-table / NSG names use the
 # canonical infraID from install/metadata.json (written by `make ignition`).
 # When `make network` is called before `make ignition`, render-tfvars-from-env.sh
@@ -109,14 +111,24 @@ install-config: verify
 	@bash scripts/render-install-config.sh
 
 ignition: install-config
-	@mkdir -p $(INSTALL_DIR)
-	@rm -rf $(INSTALL_DIR)/manifests $(INSTALL_DIR)/openshift $(INSTALL_DIR)/*.ign $(INSTALL_DIR)/auth || true
-	@cp install-config/install-config.yaml $(INSTALL_DIR)/install-config.yaml
-	@$(INSTALLER) --dir=$(INSTALL_DIR) create manifests
-	@rm -f $(INSTALL_DIR)/openshift/99_openshift-cluster-api_master-machines-*.yaml \
-	       $(INSTALL_DIR)/openshift/99_openshift-cluster-api_worker-machineset-*.yaml \
-	       $(INSTALL_DIR)/openshift/99_openshift-machine-api_master-control-plane-machine-set.yaml || true
-	@$(INSTALLER) --dir=$(INSTALL_DIR) create ignition-configs
+	@if [[ -f "$(INSTALL_DIR)/metadata.json" && "$$FORCE" != "1" ]]; then \
+	  if [[ -f "$(INSTALL_DIR)/bootstrap.ign" && -f "$(INSTALL_DIR)/master.ign" && -f "$(INSTALL_DIR)/worker.ign" ]]; then \
+	    echo "Reusing existing ignition assets in $(INSTALL_DIR) (set FORCE=1 to regenerate, or run 'make clean-install' first)."; \
+	  else \
+	    echo "ERROR: $(INSTALL_DIR)/metadata.json exists but one or more ignition files are missing."; \
+	    echo "Run 'make clean-install' to start over, or FORCE=1 make ignition to regenerate intentionally."; \
+	    exit 1; \
+	  fi; \
+	else \
+	  mkdir -p $(INSTALL_DIR); \
+	  rm -rf $(INSTALL_DIR)/manifests $(INSTALL_DIR)/openshift $(INSTALL_DIR)/*.ign $(INSTALL_DIR)/auth || true; \
+	  cp install-config/install-config.yaml $(INSTALL_DIR)/install-config.yaml; \
+	  $(INSTALLER) --dir=$(INSTALL_DIR) create manifests; \
+	  rm -f $(INSTALL_DIR)/openshift/99_openshift-cluster-api_master-machines-*.yaml \
+	        $(INSTALL_DIR)/openshift/99_openshift-cluster-api_worker-machineset-*.yaml \
+	        $(INSTALL_DIR)/openshift/99_openshift-machine-api_master-control-plane-machine-set.yaml || true; \
+	  $(INSTALLER) --dir=$(INSTALL_DIR) create ignition-configs; \
+	fi
 
 clean-install:
 	@rm -rf $(INSTALL_DIR)
@@ -145,8 +157,10 @@ wait-install:
 	@bash scripts/wait-install.sh
 
 # ---- One-command install ----
-# `make all` walks the canonical install order from docs/manual-install.md and is safe
-# to re-run (every target is idempotent). Set YES=1 to skip the cost prompt.
+# `make all` walks the canonical install order from docs/manual-install.md and is
+# safe to re-run after transient failures. Existing ignition assets are reused;
+# set FORCE=1 only when you intentionally want to regenerate them. Set YES=1 to
+# skip the cost prompt.
 _cost-prompt:
 	@if [[ "$$YES" != "1" ]]; then \
 	  printf '\nAbout to provision Azure resources for cluster %s in %s.\n' "$$CLUSTER_NAME" "$$LOCATION"; \

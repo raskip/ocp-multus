@@ -66,9 +66,20 @@ ask WORKLOAD_RESOURCE_GROUP  "Cluster workload resource group (will be created)"
 ask NETWORK_RESOURCE_GROUP   "Resource group containing the cluster VNet"         "rg-${CLUSTER_NAME}-net"
 ask VIRTUAL_NETWORK          "VNet name (must already exist)"                     "vnet-${CLUSTER_NAME}-ocp"
 ask MACHINE_NETWORK_CIDR     "Spoke VNet machine CIDR (covers all OS subnets)"    "10.20.0.0/22"
-ask ADMIN_SSH_SOURCE_IP      "Admin SSH source CIDR (your workstation /32)"       "0.0.0.0/0"
+ask ADMIN_SSH_SOURCE_IP      "Admin SSH source CIDR (your workstation /32)"       ""
 ask DNS_RESOURCE_GROUP       "Resource group of the parent DNS zone (legacy)"     "$PARENT_DNS_RESOURCE_GROUP"
 ask HUB_DNS_RESOURCE_GROUP   "RG holding privatelink.blob.core.windows.net zone"  "$NETWORK_RESOURCE_GROUP"
+
+if [[ -z "$ADMIN_SSH_SOURCE_IP" ]]; then
+  echo "ADMIN_SSH_SOURCE_IP is required. Use your workstation public IP as /32, or your corporate VPN exit CIDR." >&2
+  exit 1
+fi
+
+if [[ "$ADMIN_SSH_SOURCE_IP" == "0.0.0.0/0" && "${ALLOW_OPEN_SSH:-0}" != "1" ]]; then
+  echo "Refusing ADMIN_SSH_SOURCE_IP=0.0.0.0/0 because it opens SSH to the internet." >&2
+  echo "Use a /32 or VPN CIDR, or set ALLOW_OPEN_SSH=1 if this is a throwaway lab." >&2
+  exit 1
+fi
 
 # Subnets — start from the example template; the wizard does not prompt for
 # the per-subnet CIDRs unless the user opted in to advanced editing. They
@@ -104,8 +115,8 @@ ADMIN_SSH_SOURCE_IP=$ADMIN_SSH_SOURCE_IP
 
 INFRA_ID=
 
-CONTROL_PLANE_SUBNET=snet-${CLUSTER_NAME}-master
-COMPUTE_SUBNET=snet-${CLUSTER_NAME}-worker
+CONTROL_PLANE_SUBNET=snet-ocp-master
+COMPUTE_SUBNET=snet-ocp-worker
 
 # Subnet CIDRs (defaults sized for a small PoC; resize before production).
 SUBNET_MASTER_CIDR=10.20.1.0/28
@@ -115,6 +126,13 @@ SUBNET_MULTUS_CIDR=10.20.2.0/24
 SUBNET_SRIOV_CIDR=10.20.3.0/24
 
 MACHINE_NETWORK_CIDR=$MACHINE_NETWORK_CIDR
+CLUSTER_NETWORK_CIDR=10.128.0.0/14
+CLUSTER_NETWORK_HOST_PREFIX=23
+SERVICE_NETWORK_CIDR=172.30.0.0/16
+
+CONTROL_PLANE_VM_SIZE=Standard_D8s_v5
+WORKER_VM_SIZE=Standard_D4s_v5
+SRIOV_WORKER_VM_SIZE=Standard_D8s_v5
 
 PULL_SECRET_FILE=$PULL_SECRET_FILE
 SSH_PUBLIC_KEY_FILE=$SSH_PUBLIC_KEY_FILE

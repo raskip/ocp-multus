@@ -7,7 +7,7 @@ decisions, prerequisites, and post-install context see
 debugging see [`manual-install.md`](./manual-install.md).
 
 Assumes a WSL2 / Linux / macOS shell with `bash` ≥ 4, `make`, `jq`,
-`az` (Azure CLI), and `terraform` ≥ 1.5 already on `PATH`, plus an
+`az` (Azure CLI), and `terraform` ≥ 1.6 already on `PATH`, plus an
 Azure subscription where you can create resources. Run `make verify`
 once after cloning — it auto-checks all of these and points to
 install hints if anything is missing.
@@ -78,9 +78,13 @@ make all                       # full install end-to-end (~60 min)
                                # YES=1 make all  → skip the cost prompt
 ```
 
-The chain is re-runnable — every Terraform apply is idempotent — so
-Ctrl-C and rerun is safe. CSR approval is handled automatically by
-the `wait-install` step.
+The chain is re-runnable after transient failures. Terraform applies
+are idempotent, and `make ignition` reuses existing `install/*.ign`
+assets once `install/metadata.json` exists so reruns do not rotate the
+cluster infraID or delete `install/auth/`. To intentionally rebuild the
+installer state, run `make clean-install` first (or use `FORCE=1 make
+ignition`). CSR approval is handled automatically by the `wait-install`
+step.
 
 ## 7. (Optional) Multus secondary-network demo
 

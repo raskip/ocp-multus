@@ -32,6 +32,8 @@ if [[ -z "$CLUSTER_SUB" ]]; then
 fi
 WORKLOAD_RG="${WORKLOAD_RESOURCE_GROUP:?WORKLOAD_RESOURCE_GROUP required}"
 NETWORK_RG="${NETWORK_RESOURCE_GROUP:-$WORKLOAD_RG}"
+PRIVATE_DNS_SUB="${PRIVATE_DNS_SUBSCRIPTION_ID:-$CLUSTER_SUB}"
+HUB_DNS_RG="${HUB_DNS_RESOURCE_GROUP:-$NETWORK_RG}"
 
 # Resolve the principal id we're checking: SP if osServicePrincipal.json
 # exists (matches what openshift-install would use), else the signed-in user.
@@ -69,6 +71,8 @@ has_role() {
 SUB_SCOPE="/subscriptions/$CLUSTER_SUB"
 WL_SCOPE="$SUB_SCOPE/resourceGroups/$WORKLOAD_RG"
 NET_SCOPE="$SUB_SCOPE/resourceGroups/$NETWORK_RG"
+PDNS_SUB_SCOPE="/subscriptions/$PRIVATE_DNS_SUB"
+PDNS_SCOPE="$PDNS_SUB_SCOPE/resourceGroups/$HUB_DNS_RG"
 
 # Install-time: Reader on subscription is the minimum (Contributor / Owner
 # also satisfy it via inheritance — check any of the three).
@@ -101,6 +105,20 @@ elif has_role "Network Contributor" "$NET_SCOPE" \
 else
   pf_fail "no Network Contributor/Contributor/Owner on $NET_SCOPE (ingress-operator needs this to create LB frontend IPs)"
   pf_info "fix: az role assignment create --assignee $PRINCIPAL_ID --role 'Network Contributor' --scope $NET_SCOPE"
+fi
+
+# Private DNS hub zone: terraform/01-network writes the storage private endpoint
+# A-record and VNet link into privatelink.blob.core.windows.net. In enterprise
+# tenants this is often owned by a separate hub/connectivity DNS RG/subscription.
+if has_role "Private DNS Zone Contributor" "$PDNS_SCOPE" \
+  || has_role "Contributor"              "$PDNS_SCOPE" \
+  || has_role "Owner"                    "$PDNS_SCOPE" \
+  || has_role "Contributor"              "$PDNS_SUB_SCOPE" \
+  || has_role "Owner"                    "$PDNS_SUB_SCOPE"; then
+  pf_pass "private DNS write access on $HUB_DNS_RG (or higher)"
+else
+  pf_fail "no Private DNS Zone Contributor/Contributor/Owner on $PDNS_SCOPE (storage Private Endpoint DNS A-record + VNet link need this)"
+  pf_info "fix: az role assignment create --assignee $PRINCIPAL_ID --role 'Private DNS Zone Contributor' --scope $PDNS_SCOPE"
 fi
 
 return 0
