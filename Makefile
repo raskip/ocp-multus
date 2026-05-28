@@ -15,7 +15,7 @@ INSTALL_DIR := $(CURDIR)/install
 export
 
 .PHONY: help verify prereqs network upload-rhcos image install-config ignition \
-        tfvars tools preflight init-config \
+        tfvars tfvars-refresh tools preflight init-config \
         upload-ignition bootstrap control-plane destroy-bootstrap workers \
         destroy-workers destroy-control-plane destroy-image destroy-network \
         destroy-prereqs destroy clean-install \
@@ -57,6 +57,17 @@ tfvars: verify
 	@bash scripts/render-tfvars.sh
 	@bash scripts/render-tfvars-from-env.sh
 
+# tfvars-refresh re-runs render-tfvars-from-env.sh so the per-stack
+# `from-env.auto.tfvars` files pick up the canonical infra_id from
+# install/metadata.json once `make ignition` has produced it. Without
+# this, terraform/01-network creates resources named
+# `${CLUSTER_NAME}-poc-nsg` etc. while openshift-install's generated
+# cloud-provider-config ConfigMap expects `${infraID}-nsg`, leading to
+# ingress LoadBalancerService failures ("nsg not found"). Idempotent —
+# safe to run any time; just rewrites *.auto.tfvars.
+tfvars-refresh:
+	@bash scripts/render-tfvars-from-env.sh
+
 # Interactive wizard that creates config/cluster.env. Has NO dependency on
 # `verify` because it creates the file that verify checks for. Pass --force
 # to overwrite an existing cluster.env.
@@ -64,7 +75,13 @@ init-config:
 	@bash scripts/init-config.sh $(if $(FORCE),--force,)
 
 prereqs:           ; cd terraform/00-prereqs        && $(TF) init && $(TF) apply -auto-approve
-network:           tfvars
+# network depends on tfvars-refresh so the route-table / NSG names use the
+# canonical infraID from install/metadata.json (written by `make ignition`).
+# When `make network` is called before `make ignition`, render-tfvars-from-env.sh
+# transparently falls back to $INFRA_ID or ${CLUSTER_NAME}-poc (see the script
+# header), so the dependency is safe in either order — but the `make all`
+# chain below sequences ignition first so the canonical infraID is used.
+network:           tfvars tfvars-refresh
 	cd terraform/01-network        && $(TF) init && $(TF) apply -auto-approve
 upload-rhcos:      ; bash scripts/upload-rhcos.sh
 image:             tfvars upload-rhcos
@@ -137,7 +154,22 @@ _cost-prompt:
 	  read -r _; \
 	fi
 
-all: _cost-prompt verify tfvars prereqs network ignition image bootstrap control-plane wait-bootstrap destroy-bootstrap workers wait-install
+# Install order rationale (B59/B61 fix):
+#   1. prereqs   — workload RG, storage account, parent-zone NS-record, private DNS zone
+#   2. ignition  — generates install/metadata.json containing the canonical infraID
+#                  (e.g. "lab-gbglx") that openshift-install will use for resource names
+#                  in its generated cloud-provider-config ConfigMap.
+#   3. network   — auto-triggers tfvars-refresh which re-renders 01-network.auto.tfvars
+#                  with infra_id = the canonical infraID. The route table and NSGs are
+#                  then named to match what the cluster's cloud provider expects.
+#   4. image, bootstrap, control-plane, workers — unchanged.
+#
+# Running network BEFORE ignition (the prior order) caused infra_id to fall back
+# to ${CLUSTER_NAME}-poc, producing TF resources that did not match the names
+# openshift-install bakes into the cluster's cloud-provider-config; the
+# ingress-operator could not find its NSG ("nsg ${CLUSTER_NAME}-poc-nsg not
+# found") and the install hung at the wait-for-install-complete step.
+all: _cost-prompt verify tfvars prereqs ignition network image bootstrap control-plane wait-bootstrap destroy-bootstrap workers wait-install
 	@echo
 	@echo "Cluster install complete. Run 'make cluster-status' for a summary."
 

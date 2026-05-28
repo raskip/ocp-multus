@@ -66,6 +66,15 @@ require ARCHITECTURE
 : "${SUBNET_MULTUS_CIDR:=10.20.2.0/24}"
 : "${SUBNET_SRIOV_CIDR:=10.20.3.0/24}"
 
+# Default to attaching the cluster route table to the master/bootstrap/multus
+# subnets in addition to worker (worker is always attached). This is the right
+# default for hub-spoke + firewall-egress topologies, which is the recommended
+# enterprise setup (see docs/network-prereqs.md). Customers who use NAT
+# gateway or direct internet on master subnets can set
+# ATTACH_RT_EXTRA_SUBNETS= (empty) in config/cluster.env to restore the
+# legacy behavior where only worker subnet has the UDR attached.
+: "${ATTACH_RT_EXTRA_SUBNETS:=master,bootstrap,multus}"
+
 # Resolve infra_id (precedence: metadata.json > $INFRA_ID > ${CLUSTER_NAME}-poc).
 INFRA_ID_FROM_ENV="${INFRA_ID:-}"
 META="$REPO_ROOT/install/metadata.json"
@@ -112,6 +121,26 @@ EOF
 )"
 
 # ---- 01-network ------------------------------------------------------------
+# Convert comma-separated ATTACH_RT_EXTRA_SUBNETS into an HCL list literal.
+# Empty value -> [] (legacy behavior: only worker has UDR).
+hcl_string_list() {
+  local csv="$1"
+  if [[ -z "$csv" ]]; then printf '[]'; return; fi
+  local IFS=','
+  read -ra parts <<< "$csv"
+  local out="["
+  local sep=""
+  for p in "${parts[@]}"; do
+    p="${p#"${p%%[![:space:]]*}"}"
+    p="${p%"${p##*[![:space:]]}"}"
+    [[ -z "$p" ]] && continue
+    out+="${sep}\"${p}\""
+    sep=", "
+  done
+  out+="]"
+  printf '%s' "$out"
+}
+
 write_file "$REPO_ROOT/terraform/01-network/from-env.auto.tfvars" "$(cat <<EOF
 cluster_subscription_id      = $(hcl_str "$CLUSTER_SUBSCRIPTION_ID")
 private_dns_subscription_id  = $(hcl_str "$PRIVATE_DNS_SUBSCRIPTION_ID")
@@ -129,6 +158,7 @@ subnet_worker_cidr           = $(hcl_str "$SUBNET_WORKER_CIDR")
 subnet_bootstrap_cidr        = $(hcl_str "$SUBNET_BOOTSTRAP_CIDR")
 subnet_multus_cidr           = $(hcl_str "$SUBNET_MULTUS_CIDR")
 subnet_sriov_cidr            = $(hcl_str "$SUBNET_SRIOV_CIDR")
+attach_route_table_to_extra_subnets = $(hcl_string_list "$ATTACH_RT_EXTRA_SUBNETS")
 EOF
 )"
 

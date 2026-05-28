@@ -85,20 +85,32 @@ az account set --subscription "$CLUSTER_SUBSCRIPTION_ID"
 
 ## Deploy
 
+The install order below sequences `ignition` BEFORE `network` so the
+`infra_id` baked into the route table / NSG names matches the canonical
+infraID that openshift-install writes to `install/metadata.json` (the same
+infraID it also hard-codes into the cluster's `openshift-config/cloud-provider-config`
+ConfigMap). Running `network` before `ignition` was the previous default; it
+caused the cluster's cloud provider to look up resources named
+`${CLUSTER_NAME}-poc-nsg` while Terraform had created `${CLUSTER_NAME}-${hash}-nsg`,
+leaving the ingress operator unable to reconcile the apps LoadBalancer.
+
 ```bash
 make verify
 
 # 1. DNS, workload resource group, storage, and private DNS
 make prereqs
 
-# 2. Subnets, NSGs, internal load balancers, private endpoint, uploader VM
-make network
-
-# 3. Render install-config.yaml
+# 2. Render install-config.yaml
 make install-config
 
-# 4. Create manifests, remove Machine API manifests, and create ignition
+# 3. Create manifests, remove Machine API manifests, and create ignition.
+#    Generates install/metadata.json containing the canonical infraID.
 make ignition
+
+# 4. Subnets, NSGs, internal load balancers, private endpoint, uploader VM.
+#    Auto-triggers `tfvars-refresh` which re-renders 01-network's auto.tfvars
+#    with infra_id = the canonical infraID from install/metadata.json.
+make network
 
 # 5. Upload RHCOS and create the Azure image
 make image
