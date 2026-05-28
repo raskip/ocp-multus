@@ -104,6 +104,13 @@ private IP only. The installer host therefore needs *one* of:
 | **C. Azure Bastion** | Bastion in the spoke VNet, SSH tunnel from workstation via the portal or `az network bastion tunnel` | Highest enterprise compatibility; no public IPs on the jump host. |
 | **D. Private-only (VPN / ExpressRoute)** | On-prem workstation reaches the spoke VNet via existing connectivity, no public IP at all | Production-realistic. Requires the corporate WAN to extend to the cluster spoke. |
 
+The repo's optional Windows browser/RDP jump host
+(`CREATE_WINDOWS_JUMP=true`) is only a convenience for accessing an
+internal OpenShift console. It is disabled by default and is not
+required for `make all`; the Linux examples in
+`examples/jump-host-access/` or a customer-provided host are the normal
+installer-host patterns.
+
 See `docs/jump-host-access-decision.md` for the full decision tree
 and `examples/jump-host-access/` for working Terraform snippets per
 pattern.

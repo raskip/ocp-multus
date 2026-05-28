@@ -82,8 +82,9 @@ variable "subnet_sriov_cidr" {
 # pre-existing resources using the *_id inputs below.
 #
 # Either way, the cluster-specific resources (internal LBs, DNS records,
-# storage Private Endpoint, uploader VM, Windows jump VM) are always
-# created — those belong to the cluster, not to shared network plumbing.
+# storage Private Endpoint, uploader VM) are created — those belong to
+# the cluster, not to shared network plumbing. The optional Windows jump
+# host is controlled separately by create_windows_jump.
 #
 # See docs/network-prereqs.md for the BYO contract (subnets, NSGs, UDR,
 # DNS, peering) and examples/network-prereqs-azcli/ for runnable
@@ -193,6 +194,12 @@ variable "ssh_public_key_path" {
 variable "admin_ssh_source_ip" {
   description = "Public IP (or CIDR) allowed to SSH to the uploader jumpbox"
   type        = string
+}
+
+variable "create_windows_jump" {
+  description = "When true, create an optional Windows Server jump VM in the bootstrap subnet for browser/RDP access to an internal OpenShift console. Default false because many enterprise tenants block Windows images and the VM is not required for install."
+  type        = bool
+  default     = false
 }
 
 variable "architecture" {

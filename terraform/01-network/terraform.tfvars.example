@@ -9,6 +9,7 @@ vnet_resource_group           = "rg-network-example"
 workload_resource_group_name  = "rg-ocp-lab"
 private_dns_zone_name         = "ocp.example.com"
 admin_ssh_source_ip           = "203.0.113.10/32"
+create_windows_jump           = false
 
 subnet_master_cidr            = "10.20.1.0/28"
 subnet_worker_cidr            = "10.20.1.16/28"

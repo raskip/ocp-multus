@@ -39,8 +39,10 @@ behalf and that causes confusing failures if mis-set.
 4. **Ingress publish mode.** This repo defaults to `publish: Internal`
    (internal load balancer). Confirm that the workstation that will run
    `openshift-install wait-for ... install-complete` and `oc` can reach
-   the API + apps internal LBs (typically via VPN, ExpressRoute, jump
-   VM, or Azure Bastion).
+   the API + apps internal LBs (typically via VPN, ExpressRoute, a
+   Linux/customer-provided jump VM, or Azure Bastion). The repo's
+   Windows browser/RDP jump host is optional (`CREATE_WINDOWS_JUMP=true`)
+   and is not required for install.
 5. **Image-registry storage policy.** Some tenant policies block the
    image-registry operator's default storage account creation
    (e.g. `allowSharedKeyAccess=false`). If so, plan to set the operator
@@ -117,7 +119,8 @@ make install-config
 #    Generates install/metadata.json containing the canonical infraID.
 make ignition
 
-# 4. Subnets, NSGs, internal load balancers, private endpoint, uploader VM.
+# 4. Subnets, NSGs, internal load balancers, private endpoint, uploader VM,
+#    and (only if CREATE_WINDOWS_JUMP=true) a Windows browser/RDP jump host.
 #    Auto-triggers `tfvars-refresh` which re-renders 01-network's auto.tfvars
 #    with infra_id = the canonical infraID from install/metadata.json.
 make network

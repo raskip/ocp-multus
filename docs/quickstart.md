@@ -86,6 +86,12 @@ installer state, run `make clean-install` first (or use `FORCE=1 make
 ignition`). CSR approval is handled automatically by the `wait-install`
 step.
 
+`make all` does **not** require the optional Windows browser/RDP jump
+host. Set `CREATE_WINDOWS_JUMP=true` in `config/cluster.env` only if
+you explicitly want that convenience host for accessing an internal
+OpenShift console; otherwise use your chosen jump-host access pattern
+from [`jump-host-access-decision.md`](./jump-host-access-decision.md).
+
 ## 7. (Optional) Multus secondary-network demo
 
 ```bash

@@ -14,10 +14,10 @@ output "uploader_resource_group" { value = data.azurerm_resource_group.workload.
 output "storage_account_name" { value = local.storage_account_name }
 output "storage_account_id" { value = local.storage_account_id }
 
-output "win_jump_vm_name" { value = azurerm_windows_virtual_machine.win_jump.name }
-output "win_jump_private_ip" { value = azurerm_network_interface.win_jump.private_ip_address }
-output "win_jump_admin_username" { value = azurerm_windows_virtual_machine.win_jump.admin_username }
+output "win_jump_vm_name" { value = var.create_windows_jump ? azurerm_windows_virtual_machine.win_jump[0].name : null }
+output "win_jump_private_ip" { value = var.create_windows_jump ? azurerm_network_interface.win_jump[0].private_ip_address : null }
+output "win_jump_admin_username" { value = var.create_windows_jump ? azurerm_windows_virtual_machine.win_jump[0].admin_username : null }
 output "win_jump_admin_password" {
-  value     = random_password.win_jump.result
+  value     = var.create_windows_jump ? random_password.win_jump[0].result : null
   sensitive = true
 }

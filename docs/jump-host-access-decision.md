@@ -82,10 +82,14 @@ example from `examples/jump-host-access/` into your repo fork.
 ## What "use this pattern" actually means
 
 Patterns A, B, and C all require **a jump VM inside the spoke VNet**
-that you SSH into and run `make` from. Pattern D assumes your
-workstation is *itself* on a network that can reach the spoke
-privately, so the installer host is your workstation and no jump VM
-is needed.
+that you SSH into and run `make` from. Use the Linux examples under
+`examples/jump-host-access/`, or a customer-provided equivalent. The
+repo's Terraform can also create an optional Windows browser/RDP host
+for console access when `CREATE_WINDOWS_JUMP=true`, but that host is
+not required for install and is disabled by default because enterprise
+tenants often block Windows images. Pattern D assumes your workstation
+is *itself* on a network that can reach the spoke privately, so the
+installer host is your workstation and no jump VM is needed.
 
 In every case:
 

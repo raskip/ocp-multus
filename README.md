@@ -56,7 +56,11 @@ manual walkthrough useful for debugging see
 - Bootstrap, control-plane, and worker VMs.
 - Optional Multus macvlan and host-device validation manifests.
 
-The default topology is internal: `publish: Internal`.
+The default topology is internal: `publish: Internal`. A Windows
+browser/RDP jump host is available as an opt-in convenience
+(`CREATE_WINDOWS_JUMP=true`) but is not required for `make all`;
+use your existing VPN/ExpressRoute path, a Linux jump host, hub-FW
+DNAT, or Azure Bastion when that fits your tenant better.
 
 ## Repository layout
 
@@ -67,7 +71,7 @@ The default topology is internal: `publish: Internal`.
 | `install-config/install-config.yaml.tmpl` | OpenShift install-config template. |
 | `scripts/` | Helper scripts (render config, resolve RHCOS, uploads, bootstrap wait, sanitize, …). |
 | `terraform/00-prereqs` | DNS, resource group, storage, and private DNS prerequisites. |
-| `terraform/01-network` | Subnets, NSGs, load balancers, private endpoint, and uploader VM. |
+| `terraform/01-network` | Subnets, NSGs, load balancers, private endpoint, uploader VM, and optional Windows jump VM. |
 | `terraform/02-image` | RHCOS Azure image and Shared Image Gallery version. |
 | `terraform/03-bootstrap` | Bootstrap VM. |
 | `terraform/04-control-plane` | Control-plane VMs. |

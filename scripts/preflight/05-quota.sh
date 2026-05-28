@@ -8,6 +8,7 @@
 #   1x bootstrap     @ 4 vCPU =  4  (short-lived, but consumed during install)
 #   1x SR-IOV worker @ 8 vCPU =  8  (optional)
 #   uploader VM      @ 2 vCPU =  2
+#   Windows jump VM  @ 2 vCPU =  2  (only if CREATE_WINDOWS_JUMP=true)
 # Required minimum: ~46 vCPU. We warn under 60 to give headroom for
 # manual scaling / patch retries.
 #
@@ -37,6 +38,9 @@ case "${ARCHITECTURE:-x86_64}" in
 esac
 
 MIN_REQUIRED=46
+if [[ "${CREATE_WINDOWS_JUMP:-false}" == "true" ]]; then
+  MIN_REQUIRED=$((MIN_REQUIRED + 2))
+fi
 MIN_RECOMMENDED=60
 
 USAGE_JSON=$(az vm list-usage --location "$LOCATION" "${SUB_ARGS[@]}" -o json 2>/dev/null || echo '[]')

@@ -40,7 +40,8 @@ The cluster installer creates:
 - Private DNS zone `<cluster_name>.<base_domain>` (e.g. `lab.ocp.example.com`)
 - Private DNS records `api`, `api-int`, `*.apps` inside that zone
 - Storage Private Endpoint for the bootstrap/RHCOS storage account
-- Uploader VM (Linux) and Windows jump VM in the bootstrap subnet
+- Uploader VM (Linux) and, only if `CREATE_WINDOWS_JUMP=true`, an
+  optional Windows browser/RDP jump VM in the bootstrap subnet
 
 > **DNS layout note (B62 fix).** Since the B62 fix, the cluster's private
 > DNS zone is created with the cluster name as the leftmost label
@@ -60,7 +61,7 @@ The cluster installer creates:
 | Subnet | Minimum | Recommended | Rationale |
 |---|---|---|---|
 | `snet-ocp-master` | /28 (16 IP) | **/27 (32 IP)** | 3 master VMs + ILB frontends + storage PE; count stays fixed at 3 masters |
-| `snet-ocp-bootstrap` | /29 (8 IP) | **/28 (16 IP)** | 1 bootstrap VM (transient) + uploader VM + Windows jump VM |
+| `snet-ocp-bootstrap` | /29 (8 IP) | **/28 (16 IP)** | 1 bootstrap VM (transient) + uploader VM + optional Windows jump VM (`CREATE_WINDOWS_JUMP=true`) |
 | `snet-ocp-worker` | /28 (16 IP) | **/24 (256 IP)** | 2–N worker VMs + ingress ILB frontend; grows with workload |
 | `snet-ocp-multus` | /25 (128 IP) | **/24 (256 IP)** | Pod IPs for whereabouts IPAM on macvlan / bridge NADs |
 | `snet-ocp-sriov` | /28 (16 IP) | **/27 (32 IP)** | One VF IP per worker per host-device NIC + a few reserves |

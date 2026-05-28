@@ -418,9 +418,9 @@ resource "azurerm_lb_rule" "ingress_443" {
 locals {
   cluster_dns_zone_name = var.use_legacy_dns_layout ? var.private_dns_zone_name : "${var.cluster_name}.${var.private_dns_zone_name}"
 
-  api_record_name      = var.use_legacy_dns_layout ? "api.${var.cluster_name}" : "api"
-  api_int_record_name  = var.use_legacy_dns_layout ? "api-int.${var.cluster_name}" : "api-int"
-  apps_record_name     = var.use_legacy_dns_layout ? "*.apps.${var.cluster_name}" : "*.apps"
+  api_record_name     = var.use_legacy_dns_layout ? "api.${var.cluster_name}" : "api"
+  api_int_record_name = var.use_legacy_dns_layout ? "api-int.${var.cluster_name}" : "api-int"
+  apps_record_name    = var.use_legacy_dns_layout ? "*.apps.${var.cluster_name}" : "*.apps"
 }
 
 resource "azurerm_private_dns_a_record" "api" {
@@ -565,6 +565,7 @@ resource "azurerm_role_assignment" "uploader_blob_contributor" {
 # OpenShift console when the cluster is deployed with publish = Internal.
 #-----------------------------------------------------------------------------
 resource "random_password" "win_jump" {
+  count            = var.create_windows_jump ? 1 : 0
   length           = 20
   special          = true
   override_special = "!@#$%*()-_=+"
@@ -575,6 +576,7 @@ resource "random_password" "win_jump" {
 }
 
 resource "azurerm_network_interface" "win_jump" {
+  count               = var.create_windows_jump ? 1 : 0
   name                = "nic-jump-win-${var.cluster_name}"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.workload.name
@@ -588,14 +590,15 @@ resource "azurerm_network_interface" "win_jump" {
 }
 
 resource "azurerm_windows_virtual_machine" "win_jump" {
+  count                 = var.create_windows_jump ? 1 : 0
   name                  = "vm-jump-win-${var.cluster_name}"
   computer_name         = "winjump"
   location              = var.location
   resource_group_name   = data.azurerm_resource_group.workload.name
   size                  = "Standard_D2s_v5"
   admin_username        = "azureuser"
-  admin_password        = random_password.win_jump.result
-  network_interface_ids = [azurerm_network_interface.win_jump.id]
+  admin_password        = random_password.win_jump[0].result
+  network_interface_ids = [azurerm_network_interface.win_jump[0].id]
   tags                  = var.tags
 
   os_disk {

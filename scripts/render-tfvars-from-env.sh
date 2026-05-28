@@ -79,6 +79,7 @@ require ARCHITECTURE
 # records use short names). Set USE_LEGACY_DNS_LAYOUT=true in cluster.env only
 # if you have an existing pre-fix cluster you cannot migrate.
 : "${USE_LEGACY_DNS_LAYOUT:=false}"
+: "${CREATE_WINDOWS_JUMP:=false}"
 
 # Resolve infra_id (precedence: metadata.json > $INFRA_ID > ${CLUSTER_NAME}-poc).
 INFRA_ID_FROM_ENV="${INFRA_ID:-}"
@@ -160,6 +161,7 @@ workload_resource_group_name = $(hcl_str "$WORKLOAD_RESOURCE_GROUP")
 private_dns_zone_name        = $(hcl_str "$BASE_DOMAIN")
 use_legacy_dns_layout        = $USE_LEGACY_DNS_LAYOUT
 admin_ssh_source_ip          = $(hcl_str "$ADMIN_SSH_SOURCE_IP")
+create_windows_jump          = $CREATE_WINDOWS_JUMP
 subnet_master_cidr           = $(hcl_str "$SUBNET_MASTER_CIDR")
 subnet_worker_cidr           = $(hcl_str "$SUBNET_WORKER_CIDR")
 subnet_bootstrap_cidr        = $(hcl_str "$SUBNET_BOOTSTRAP_CIDR")
