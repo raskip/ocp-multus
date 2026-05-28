@@ -45,28 +45,36 @@ ssh_pub_path="$REPO_ROOT/$SSH_PUBLIC_KEY_FILE"
 PULL_SECRET="$(tr -d '\n' < "$pull_secret_path")"
 SSH_PUB="$(cat "$ssh_pub_path")"
 
-export PULL_SECRET SSH_PUB ARCHITECTURE_OCP
-perl -0pe '
-  s/__BASE_DOMAIN__/$ENV{BASE_DOMAIN}/g;
-  s/__CLUSTER_NAME__/$ENV{CLUSTER_NAME}/g;
-  s/__LOCATION__/$ENV{LOCATION}/g;
-  s/__DNS_RESOURCE_GROUP__/$ENV{DNS_RESOURCE_GROUP}/g;
-  s/__NETWORK_RESOURCE_GROUP__/$ENV{NETWORK_RESOURCE_GROUP}/g;
-  s/__WORKLOAD_RESOURCE_GROUP__/$ENV{WORKLOAD_RESOURCE_GROUP}/g;
-  s/__VIRTUAL_NETWORK__/$ENV{VIRTUAL_NETWORK}/g;
-  s/__CONTROL_PLANE_SUBNET__/$ENV{CONTROL_PLANE_SUBNET}/g;
-  s/__COMPUTE_SUBNET__/$ENV{COMPUTE_SUBNET}/g;
-  s/__MACHINE_NETWORK_CIDR__/$ENV{MACHINE_NETWORK_CIDR}/g;
-  s/__CLUSTER_NETWORK_CIDR__/$ENV{CLUSTER_NETWORK_CIDR}/g;
-  s/__CLUSTER_NETWORK_HOST_PREFIX__/$ENV{CLUSTER_NETWORK_HOST_PREFIX}/g;
-  s/__SERVICE_NETWORK_CIDR__/$ENV{SERVICE_NETWORK_CIDR}/g;
-  s/__ARCHITECTURE_OCP__/$ENV{ARCHITECTURE_OCP}/g;
-  s/__CONTROL_PLANE_VM_SIZE__/$ENV{CONTROL_PLANE_VM_SIZE}/g;
-  s/__WORKER_VM_SIZE__/$ENV{WORKER_VM_SIZE}/g;
-  s/__PUBLISH__/$ENV{PUBLISH}/g;
-  s/__PULL_SECRET__/$ENV{PULL_SECRET}/g;
-  s/__SSH_PUBLIC_KEY__/$ENV{SSH_PUB}/g;
-' "$TMPL" > "$OUT"
+# Substitute __VAR__ placeholders in the template using pure bash parameter
+# expansion. Bash's `${var//pattern/replacement}` does literal substitution
+# so JSON pull secrets containing `/`, `"`, or `$` characters are handled
+# safely without escaping. We disable `patsub_replacement` (bash 5.2+) so
+# `&` and `\` in the replacement remain literal, matching pre-5.2 behavior
+# (and the behavior of the older `perl -0pe` implementation this replaced).
+# The option may not exist on bash < 5.2; `|| true` makes that a no-op.
+shopt -u patsub_replacement 2>/dev/null || true
+
+TPL="$(cat "$TMPL")"
+TPL="${TPL//__BASE_DOMAIN__/$BASE_DOMAIN}"
+TPL="${TPL//__CLUSTER_NAME__/$CLUSTER_NAME}"
+TPL="${TPL//__LOCATION__/$LOCATION}"
+TPL="${TPL//__DNS_RESOURCE_GROUP__/$DNS_RESOURCE_GROUP}"
+TPL="${TPL//__NETWORK_RESOURCE_GROUP__/$NETWORK_RESOURCE_GROUP}"
+TPL="${TPL//__WORKLOAD_RESOURCE_GROUP__/$WORKLOAD_RESOURCE_GROUP}"
+TPL="${TPL//__VIRTUAL_NETWORK__/$VIRTUAL_NETWORK}"
+TPL="${TPL//__CONTROL_PLANE_SUBNET__/$CONTROL_PLANE_SUBNET}"
+TPL="${TPL//__COMPUTE_SUBNET__/$COMPUTE_SUBNET}"
+TPL="${TPL//__MACHINE_NETWORK_CIDR__/$MACHINE_NETWORK_CIDR}"
+TPL="${TPL//__CLUSTER_NETWORK_CIDR__/$CLUSTER_NETWORK_CIDR}"
+TPL="${TPL//__CLUSTER_NETWORK_HOST_PREFIX__/$CLUSTER_NETWORK_HOST_PREFIX}"
+TPL="${TPL//__SERVICE_NETWORK_CIDR__/$SERVICE_NETWORK_CIDR}"
+TPL="${TPL//__ARCHITECTURE_OCP__/$ARCHITECTURE_OCP}"
+TPL="${TPL//__CONTROL_PLANE_VM_SIZE__/$CONTROL_PLANE_VM_SIZE}"
+TPL="${TPL//__WORKER_VM_SIZE__/$WORKER_VM_SIZE}"
+TPL="${TPL//__PUBLISH__/$PUBLISH}"
+TPL="${TPL//__PULL_SECRET__/$PULL_SECRET}"
+TPL="${TPL//__SSH_PUBLIC_KEY__/$SSH_PUB}"
+printf '%s\n' "$TPL" > "$OUT"
 
 chmod 600 "$OUT"
 echo "Wrote $OUT"
