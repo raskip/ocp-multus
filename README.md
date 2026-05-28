@@ -10,6 +10,17 @@ one), a delegated public DNS zone, a Red Hat pull secret, and Azure
 credentials with the right roles. The installer is Bash + Terraform +
 Azure CLI; the cluster is OpenShift's UPI flow.
 
+## ⚠ Before you start — pre-install procurement
+
+Some prerequisites (Red Hat pull secret, Azure subscription roles,
+DNS delegation, vCPU quota, firewall outbound allowlist, jump-host
+access pattern) take **days or weeks** to procure in an enterprise
+tenant. Don't start the install before you have them.
+
+**→ [`docs/pre-install-checklist.md`](./docs/pre-install-checklist.md)** —
+single page you can forward to your DNS / network / Entra / subscription
+teams in parallel.
+
 ## 👉 New here? Start with the onboarding playbook
 
 **→ [`docs/onboarding.md`](./docs/onboarding.md)**

@@ -12,6 +12,11 @@ Azure subscription where you can create resources. Run `make verify`
 once after cloning — it auto-checks all of these and points to
 install hints if anything is missing.
 
+> Also assumes the pre-install procurement work is already done (Red
+> Hat pull secret in hand, Azure SP + roles, DNS delegation, vCPU
+> quota, firewall outbound allowlist). If not, start at
+> [`pre-install-checklist.md`](./pre-install-checklist.md).
+
 ## 1. Clone + tools
 
 ```bash

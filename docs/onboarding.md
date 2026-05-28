@@ -8,6 +8,15 @@ If you are already familiar with UPI installs and just want the
 mechanics, skip to **Phase 2** and follow `make preflight && make all`,
 or read [`quickstart.md`](./quickstart.md) for the condensed flow.
 
+> **Phase Pre-0 — Procurement (do this first).** Before any of the
+> decisions below, gather the credentials, quota, DNS delegation, and
+> firewall allowlist your tenant needs. See
+> [`pre-install-checklist.md`](./pre-install-checklist.md) — single page
+> you can forward to your DNS / network / Entra / subscription teams
+> in parallel. **Procurement** (gather things from owners outside this
+> repo) and **decisions** (pick a pattern from the options below) are
+> two separate workstreams; Pre-0 is the former, Phase 0 is the latter.
+
 ## Phase 0 — One-time decisions
 
 Before touching any code, decide four things. Each has a short doc
