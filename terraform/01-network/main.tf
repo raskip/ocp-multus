@@ -403,10 +403,29 @@ resource "azurerm_lb_rule" "ingress_443" {
 
 #-----------------------------------------------------------------------------
 # Private DNS records for cluster endpoints (zone created in 00-prereqs)
+#
+# B62 fix: the cluster zone is named "${cluster_name}.${private_dns_zone_name}"
+# by default so the ingress-operator's dns-controller can find it and write
+# *.apps records itself. Records use short names ("api", "api-int", "*.apps")
+# because the cluster_name is now part of the zone name.
+#
+# Legacy layout (use_legacy_dns_layout=true): zone is named just
+# "${private_dns_zone_name}" and records use long names like "api.${cluster_name}".
+# Both layouts produce the SAME FQDN. Only the default (new) layout works
+# with the ingress-operator's dynamic record management — see the variable
+# docstring for full background.
 #-----------------------------------------------------------------------------
+locals {
+  cluster_dns_zone_name = var.use_legacy_dns_layout ? var.private_dns_zone_name : "${var.cluster_name}.${var.private_dns_zone_name}"
+
+  api_record_name      = var.use_legacy_dns_layout ? "api.${var.cluster_name}" : "api"
+  api_int_record_name  = var.use_legacy_dns_layout ? "api-int.${var.cluster_name}" : "api-int"
+  apps_record_name     = var.use_legacy_dns_layout ? "*.apps.${var.cluster_name}" : "*.apps"
+}
+
 resource "azurerm_private_dns_a_record" "api" {
-  name                = "api.${var.cluster_name}"
-  zone_name           = var.private_dns_zone_name
+  name                = local.api_record_name
+  zone_name           = local.cluster_dns_zone_name
   resource_group_name = data.azurerm_resource_group.workload.name
   ttl                 = 300
   records             = [azurerm_lb.api_internal.frontend_ip_configuration[0].private_ip_address]
@@ -414,8 +433,8 @@ resource "azurerm_private_dns_a_record" "api" {
 }
 
 resource "azurerm_private_dns_a_record" "api_int" {
-  name                = "api-int.${var.cluster_name}"
-  zone_name           = var.private_dns_zone_name
+  name                = local.api_int_record_name
+  zone_name           = local.cluster_dns_zone_name
   resource_group_name = data.azurerm_resource_group.workload.name
   ttl                 = 300
   records             = [azurerm_lb.api_internal.frontend_ip_configuration[0].private_ip_address]
@@ -423,8 +442,8 @@ resource "azurerm_private_dns_a_record" "api_int" {
 }
 
 resource "azurerm_private_dns_a_record" "apps" {
-  name                = "*.apps.${var.cluster_name}"
-  zone_name           = var.private_dns_zone_name
+  name                = local.apps_record_name
+  zone_name           = local.cluster_dns_zone_name
   resource_group_name = data.azurerm_resource_group.workload.name
   ttl                 = 300
   records             = [azurerm_lb.ingress_internal.frontend_ip_configuration[0].private_ip_address]

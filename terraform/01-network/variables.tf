@@ -157,8 +157,19 @@ variable "attach_route_table_to_extra_subnets" {
 }
 
 variable "private_dns_zone_name" {
-  type    = string
-  default = "ocp.example.com"
+  description = "Base domain (must match var.base_domain from 00-prereqs). The actual private DNS zone name is computed as either this value (legacy layout) or '$${cluster_name}.$${this}' (default). The variable name is retained for backward compat with existing tfvars files."
+  type        = string
+  default     = "ocp.example.com"
+}
+
+# B62 fix: see terraform/00-prereqs/variables.tf for full rationale.
+# This MUST match the same flag in 00-prereqs or the zone name + records
+# will not line up. Default false (new layout: zone is
+# ${cluster_name}.${private_dns_zone_name}, records use short names).
+variable "use_legacy_dns_layout" {
+  description = "When false (default), records are written into zone $${cluster_name}.$${private_dns_zone_name} using short names (api, api-int, *.apps). Set to true ONLY for legacy installs created before the B62 fix."
+  type        = bool
+  default     = false
 }
 
 variable "storage_account_name" {

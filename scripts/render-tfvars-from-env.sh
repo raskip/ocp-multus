@@ -75,6 +75,11 @@ require ARCHITECTURE
 # legacy behavior where only worker subnet has the UDR attached.
 : "${ATTACH_RT_EXTRA_SUBNETS:=master,bootstrap,multus}"
 
+# B62 fix: default the new DNS layout (zone is ${CLUSTER_NAME}.${BASE_DOMAIN},
+# records use short names). Set USE_LEGACY_DNS_LAYOUT=true in cluster.env only
+# if you have an existing pre-fix cluster you cannot migrate.
+: "${USE_LEGACY_DNS_LAYOUT:=false}"
+
 # Resolve infra_id (precedence: metadata.json > $INFRA_ID > ${CLUSTER_NAME}-poc).
 INFRA_ID_FROM_ENV="${INFRA_ID:-}"
 META="$REPO_ROOT/install/metadata.json"
@@ -117,6 +122,7 @@ parent_dns_resource_group    = $(hcl_str "$PARENT_DNS_RESOURCE_GROUP")
 workload_resource_group_name = $(hcl_str "$WORKLOAD_RESOURCE_GROUP")
 vnet_name                    = $(hcl_str "$VIRTUAL_NETWORK")
 vnet_resource_group          = $(hcl_str "$NETWORK_RESOURCE_GROUP")
+use_legacy_dns_layout        = $USE_LEGACY_DNS_LAYOUT
 EOF
 )"
 
@@ -152,6 +158,7 @@ vnet_name                    = $(hcl_str "$VIRTUAL_NETWORK")
 vnet_resource_group          = $(hcl_str "$NETWORK_RESOURCE_GROUP")
 workload_resource_group_name = $(hcl_str "$WORKLOAD_RESOURCE_GROUP")
 private_dns_zone_name        = $(hcl_str "$BASE_DOMAIN")
+use_legacy_dns_layout        = $USE_LEGACY_DNS_LAYOUT
 admin_ssh_source_ip          = $(hcl_str "$ADMIN_SSH_SOURCE_IP")
 subnet_master_cidr           = $(hcl_str "$SUBNET_MASTER_CIDR")
 subnet_worker_cidr           = $(hcl_str "$SUBNET_WORKER_CIDR")

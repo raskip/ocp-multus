@@ -37,9 +37,21 @@ Runnable example scripts are in
 
 The cluster installer creates:
 - Internal LBs `lb-api-internal-<cluster>` and `lb-ingress-internal-<cluster>`
-- Private DNS records `api.<cluster>`, `api-int.<cluster>`, `*.apps.<cluster>`
+- Private DNS zone `<cluster_name>.<base_domain>` (e.g. `lab.ocp.example.com`)
+- Private DNS records `api`, `api-int`, `*.apps` inside that zone
 - Storage Private Endpoint for the bootstrap/RHCOS storage account
 - Uploader VM (Linux) and Windows jump VM in the bootstrap subnet
+
+> **DNS layout note (B62 fix).** Since the B62 fix, the cluster's private
+> DNS zone is created with the cluster name as the leftmost label
+> (`<cluster_name>.<base_domain>`) and records use short names. This is
+> what `openshift-install`'s ingress-operator expects in order to manage
+> the dynamic `*.apps` records itself; the legacy layout (zone named
+> `<base_domain>`, records named `api.<cluster_name>` etc.) caused the
+> install to hang at `wait-for install-complete`. Set
+> `USE_LEGACY_DNS_LAYOUT=true` in `config/cluster.env` only when
+> migrating an existing pre-fix cluster you cannot rebuild — switching
+> layouts is a Terraform destroy + create of the zone resource.
 
 ---
 

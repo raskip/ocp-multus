@@ -88,4 +88,17 @@ if [[ -n "$BASE_DOMAIN_FROM_TF" && "$BASE_DOMAIN_FROM_TF" == "$PARENT_ZONE" ]]; 
   pf_warn "base_domain == parent_dns_zone ($PARENT_ZONE): the current terraform/00-prereqs/main.tf would try to create the parent zone again — see docs/network-prereqs.md for the 'one cluster per parent zone' pattern"
 fi
 
+# B62 awareness: warn if USE_LEGACY_DNS_LAYOUT=true. The legacy layout
+# (cluster zone == base_domain, records use long names like
+# "api.${cluster_name}") prevents openshift-install's ingress-operator
+# from finding the zone to write *.apps records, hanging the install at
+# wait-for-install-complete. Default (false) is the correct setting for
+# any new cluster.
+USE_LEGACY="${tfvars__use_legacy_dns_layout:-${USE_LEGACY_DNS_LAYOUT:-false}}"
+if [[ "$USE_LEGACY" == "true" ]]; then
+  pf_warn "USE_LEGACY_DNS_LAYOUT=true: cluster install will hang at wait-for-install-complete waiting for ingress ClusterOperator; only use this for an existing pre-B62-fix cluster you cannot rebuild"
+else
+  pf_pass "DNS layout: new (cluster zone will be \${CLUSTER_NAME}.\${BASE_DOMAIN} with short record names — ingress-operator compatible)"
+fi
+
 return 0

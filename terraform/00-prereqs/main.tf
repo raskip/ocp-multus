@@ -44,9 +44,14 @@ data "azurerm_virtual_network" "shared" {
   resource_group_name = var.vnet_resource_group
 }
 
+locals {
+  # See variable "use_legacy_dns_layout" in variables.tf for the rationale.
+  cluster_private_dns_zone_name = var.use_legacy_dns_layout ? var.base_domain : "${var.cluster_name}.${var.base_domain}"
+}
+
 resource "azurerm_private_dns_zone" "cluster" {
   provider            = azurerm.cluster
-  name                = var.base_domain
+  name                = local.cluster_private_dns_zone_name
   resource_group_name = azurerm_resource_group.workload.name
   tags                = var.tags
 }
