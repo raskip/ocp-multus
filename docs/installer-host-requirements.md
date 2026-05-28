@@ -34,7 +34,7 @@ private IP lives in `MACHINE_NETWORK_CIDR`.
 | `make verify`             | ✅ | – | – | – | `az account show` requires reach to ARM + Entra. |
 | `make init-config`        | – | – | – | – | Local-only wizard. |
 | `make tfvars`             | – | – | – | – | Renders `from-env.auto.tfvars`. No network. |
-| `make preflight`          | ✅ | ✅ | – | – | Reads roles / quotas / DNS. (See `docs/preflight-checklist.md` once PR-G is merged.) |
+| `make preflight`          | ✅ | ✅ | – | – | Reads roles / quotas / DNS. See [`docs/preflight-checklist.md`](./preflight-checklist.md) for what each sub-check verifies and how to fix common findings. |
 | `make prereqs`            | ✅ | ✅ | – | – | Terraform creates the workload RG, storage account, parent-zone NS-record (cross-sub provider). |
 | `make network`            | ✅ | – | – | – | Terraform creates VNet child resources, ILBs, the uploader VM, and the storage PE. |
 | `make image`              | ✅ | – | indirect (via uploader VM) | – | RHCOS VHD is streamed through the uploader VM because the storage account is PE-only. |
@@ -69,8 +69,9 @@ breakdown.
 | Network resource group (`$NETWORK_RESOURCE_GROUP`) | **Network Contributor** | Cluster runtime updates NSG rules + adds backend pool members. |
 | Parent DNS resource group (`$PARENT_DNS_RESOURCE_GROUP`) | **DNS Zone Contributor** (cross-sub) | `make prereqs` adds the sub-zone NS-record into the parent zone. |
 
-For BYO-network deployments (PR-H once merged) you can scope the
-network role tighter — see `docs/network-prereqs.md` for the minimum
+For BYO-network deployments (set `manage_network_resources = false`
+in `terraform/01-network/`) you can scope the network role tighter —
+see [`docs/network-prereqs.md`](./network-prereqs.md) for the minimum
 NSG / route table / subnet rights.
 
 ## 3. Filesystem state

@@ -14,6 +14,15 @@ this repo on the installer host.
 > `PREFLIGHT_INCLUDE="01,05,09" make preflight` or
 > `PREFLIGHT_EXCLUDE="07,08" make preflight`.
 
+> **Not the same as `make verify`.** `make verify` is a separate,
+> non-Azure host-side check that confirms the right versions of
+> `bash`, `make`, `jq`, `az`, and `terraform` are on `PATH` (plus
+> that `config/cluster.env` and the local secrets exist). `make all`
+> runs `make verify` automatically as its first step. This document
+> covers the **Azure-side** prerequisites validated by
+> `make preflight` — run them in that order: tools (`make verify`),
+> then cloud (`make preflight`), then install (`make all`).
+
 ## 1. Azure identity & role assignments — `01-sp-roles.sh`
 
 OpenShift Azure UPI needs credentials twice:
@@ -44,8 +53,9 @@ network`. The check prints the VNet's address space and warns if your
 
 In **repo-managed network mode** (today's default) the cluster subnets
 are created by `terraform/01-network/` — missing subnets are surfaced
-as `[WARN]`, not `[FAIL]`. In **BYO-network mode** (PR-H) the subnets
-must already exist; the same `[WARN]` lines become hard blockers.
+as `[WARN]`, not `[FAIL]`. In **BYO-network mode**
+(`manage_network_resources = false`) the subnets must already exist;
+the same `[WARN]` lines become hard blockers.
 
 ## 3. NSG rules — `03-nsg.sh`
 
@@ -65,10 +75,12 @@ port ranges (`80-443`). NSGs not yet present on the subnet generate a
 When the install uses `outboundType: UserDefinedRouting` the
 control-plane, worker, bootstrap, **and** Multus subnets all need a
 route table with `0.0.0.0/0` → next-hop `VirtualAppliance` pointing at
-the firewall's private IP. Today's `terraform/01-network/` attaches the
-table only to the worker subnet (Liite B B7); the check surfaces the
-gap on the other subnets so you can either extend the attach manually
-or enable the BYO-network tfvars toggle once PR-H is merged.
+the firewall's private IP. By default `terraform/01-network/` attaches
+the table to the worker, master, bootstrap, and multus subnets
+(controlled by `ATTACH_RT_EXTRA_SUBNETS` in `config/cluster.env`); the
+check surfaces any gap so you can either extend the attach list or,
+in BYO-network mode, ensure your network team has attached the route
+table on their side.
 
 ## 5. D-series vCPU quota — `05-quota.sh`
 

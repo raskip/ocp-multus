@@ -55,17 +55,27 @@ checklist — pause and get the answer before burning a 90-minute install.
 
 ## Configuration
 
-Copy examples and edit them for your environment:
+This repo uses a **single config file** as the source of truth:
+`config/cluster.env`. Copy the example and edit it for your
+environment:
 
 ```bash
 cp config/cluster.example.env config/cluster.env
-cp terraform/00-prereqs/terraform.tfvars.example terraform/00-prereqs/terraform.tfvars
-cp terraform/01-network/terraform.tfvars.example terraform/01-network/terraform.tfvars
-cp terraform/02-image/terraform.tfvars.example terraform/02-image/terraform.tfvars
-cp terraform/03-bootstrap/terraform.tfvars.example terraform/03-bootstrap/terraform.tfvars
-cp terraform/04-control-plane/terraform.tfvars.example terraform/04-control-plane/terraform.tfvars
-cp terraform/05-workers/terraform.tfvars.example terraform/05-workers/terraform.tfvars
+$EDITOR config/cluster.env
 ```
+
+You do **not** need to fill in per-stack `terraform/*/terraform.tfvars`
+files by hand. `make tfvars` (auto-run as a prerequisite of every
+Terraform target, and as part of `make all`) executes
+`scripts/render-tfvars-from-env.sh`, which generates a
+`from-env.auto.tfvars` file inside every Terraform stack from your
+`config/cluster.env`. The `terraform/*/terraform.tfvars.example` files
+that ship in the repo are reference snippets — preflight error
+messages point at them when something specific is missing — and not
+something you copy into place during a normal install.
+
+> Alternatively, run `make init-config` for an interactive wizard
+> (~12 prompts with sensible defaults). See [`quickstart.md`](./quickstart.md).
 
 Create local secrets:
 

@@ -6,9 +6,11 @@ decisions, prerequisites, and post-install context see
 [`onboarding.md`](./onboarding.md). For per-`make`-target detail and
 debugging see [`manual-install.md`](./manual-install.md).
 
-Assumes a WSL2 / Linux / macOS shell with `bash`, `make`, `jq`, `az`,
-and `terraform` already on PATH, plus an Azure subscription where you
-can create resources.
+Assumes a WSL2 / Linux / macOS shell with `bash` ≥ 4, `make`, `jq`,
+`az` (Azure CLI), and `terraform` ≥ 1.5 already on `PATH`, plus an
+Azure subscription where you can create resources. Run `make verify`
+once after cloning — it auto-checks all of these and points to
+install hints if anything is missing.
 
 ## 1. Clone + tools
 

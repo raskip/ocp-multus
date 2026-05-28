@@ -60,12 +60,24 @@ az login
 export CLUSTER_SUBSCRIPTION_ID="<your-cluster-subscription-id>"
 az account set --subscription "$CLUSTER_SUBSCRIPTION_ID"
 
-# 4. Validate prerequisites (Azure RBAC, quotas, network reach, DNS)
+# 4. Verify host tools + local files (bash, make, jq, az, terraform,
+#    config/cluster.env, secrets/pull-secret.txt, secrets/id_ed25519.pub)
+make verify
+
+# 5. Validate Azure prerequisites (RBAC, quotas, network reach, DNS)
 make preflight
 
-# 5. Run the full install end-to-end
+# 6. Run the full install end-to-end
 make all
 ```
+
+`make verify` is the host-side check (binaries + versions + local
+files); `make preflight` is the Azure-side check (cloud RBAC, quotas,
+network reach, DNS delegation). `make all` re-runs `make verify`
+automatically as its first step, so you can skip step 4 if you're
+going straight to step 6 — but running it explicitly catches a
+missing `jq` or out-of-date `terraform` in two seconds instead of
+finding out about it once `make preflight` starts shelling out.
 
 `make preflight` reports any missing permissions, quota gaps, or
 network reach problems before you start a 40-minute install that would
