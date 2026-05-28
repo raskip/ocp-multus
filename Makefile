@@ -34,6 +34,7 @@ tools:
 	@bash scripts/fetch-openshift-tools.sh
 
 verify:
+	@bash scripts/check-host-tools.sh
 	@$(INSTALLER) version
 	@$(OC) version --client
 	@az account show --query '{name:name,id:id}' -o table

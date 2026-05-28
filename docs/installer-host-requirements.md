@@ -109,7 +109,13 @@ pattern.
 
 ## 5. Quick self-check
 
-Run this from the installer host before `make all`:
+**Easiest:** run `make verify` from the repo root — it checks all
+required host tools (bash, make, jq, az, terraform) and that
+`config/cluster.env` + the SP credential file are in place.
+
+For ad-hoc checks (or if you can't run `make` yet), this snippet
+covers the same Azure-reach surface from the installer host before
+`make all`:
 
 ```bash
 # 1. Azure ARM + identity
