@@ -14,7 +14,8 @@ install hints if anything is missing.
 
 > Also assumes the pre-install procurement work is already done (Red
 > Hat pull secret in hand, Azure SP + roles, DNS delegation, vCPU
-> quota, firewall outbound allowlist). If not, start at
+> quota, firewall outbound allowlist, and proxy/TLS-inspection decision).
+> If not, start at
 > [`pre-install-checklist.md`](./pre-install-checklist.md).
 
 ## 1. Clone + tools
@@ -77,6 +78,13 @@ make all                       # full install end-to-end (~60 min)
                                # workers > install-complete
                                # YES=1 make all  → skip the cost prompt
 ```
+
+If your enterprise firewall/proxy terminates TLS, stop here and read
+[`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md) before
+`make all`. The current automation does **not** yet inject proxy or
+`additionalTrustBundle` settings from `config/cluster.env`; treating
+this as "just an outbound allowlist" can strand bootstrap on `x509`
+image-pull errors.
 
 The chain is re-runnable after transient failures. Terraform applies
 are idempotent, and `make ignition` reuses existing `install/*.ign`

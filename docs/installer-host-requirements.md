@@ -52,7 +52,10 @@ If any of those checkmarks is impossible from the installer host's
 network position you will fail at exactly the listed target — usually
 with a misleading error such as `dial tcp ... i/o timeout` or
 `x509: certificate signed by unknown authority` (when a TLS-inspecting
-firewall sits in the middle).
+firewall sits in the middle). TLS inspection is not just an outbound
+allowlist problem: the current repo does not yet auto-render OpenShift
+`proxy:` / `additionalTrustBundle` settings from `config/cluster.env`,
+so treat it as a pre-workshop design item.
 
 ## 2. Azure RBAC requirements
 

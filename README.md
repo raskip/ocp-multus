@@ -62,6 +62,13 @@ browser/RDP jump host is available as an opt-in convenience
 use your existing VPN/ExpressRoute path, a Linux jump host, hub-FW
 DNAT, or Azure Bastion when that fits your tenant better.
 
+> **Enterprise TLS-inspection warning:** if your outbound path uses a
+> TLS-inspecting proxy/firewall, plan the OpenShift `proxy:` and
+> `additionalTrustBundle:` settings before `make all`. The repo documents
+> the required fields but does **not** yet auto-render them from
+> `config/cluster.env`; without the proxy CA bundle, bootstrap image pulls
+> can fail with `x509: certificate signed by unknown authority`.
+
 ## Repository layout
 
 | Path | Purpose |

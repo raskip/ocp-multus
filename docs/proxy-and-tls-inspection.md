@@ -1,11 +1,26 @@
 # Proxy and TLS inspection
 
+> **Automation status / workshop warning:** this repo documents the
+> OpenShift `proxy:` and `additionalTrustBundle:` fields, but it does
+> **not** yet provide first-class `config/cluster.env` variables or a
+> tested renderer for them. If your customer tenant uses an outbound
+> HTTP proxy or a TLS-inspecting firewall, treat this as a pre-workshop
+> design item with the security/network team before running `make all`.
+> Do not assume the current automation will inject the proxy CA bundle
+> automatically. Missing trust causes bootstrap/release-image pulls to
+> fail with errors such as `x509: certificate signed by unknown
+> authority`.
+
 Enterprise networks often route outbound traffic through a
 forward proxy and/or terminate TLS at a firewall (Palo Alto,
 Fortinet, Check Point, Cisco, Azure Firewall Premium with TLS
 inspection enabled). Both situations require additional fields
 in `install-config.yaml`. This document explains when to use
-each one, how to fill them in, and how to verify the result.
+each one, how to fill them in, and how to verify the result. A future
+implementation may add variables such as `PROXY_HTTP_URL`,
+`PROXY_HTTPS_URL`, `PROXY_NO_PROXY`, and
+`ADDITIONAL_TRUST_BUNDLE_FILE`; until then this is an advanced manual
+configuration area, not a one-command automated path.
 
 > **Quick test.** If `make bootstrap` proceeds past the RHCOS
 > boot phase but bootstrap-control-plane never becomes ready and

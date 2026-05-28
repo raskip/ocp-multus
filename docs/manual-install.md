@@ -26,7 +26,9 @@ behalf and that causes confusing failures if mis-set.
    `quay.io`, `mirror.openshift.com`, RHCOS release storage, and
    `management.azure.com` directly, via a corporate firewall/proxy, via an
    Azure NVA, or via Private Endpoints? If a firewall does TLS inspection,
-   you need an `additionalTrustBundle` in `install-config.yaml`.
+   you need a deliberate `proxy:` / `additionalTrustBundle` plan before
+   install. Current automation documents the fields but does **not** yet
+   render them from `config/cluster.env`.
 2. **DNS delegation.** The OpenShift `baseDomain` must be a delegated
    public sub-zone of a parent zone your org owns. Confirm whose
    subscription holds the parent zone and that you have write access to
@@ -279,11 +281,13 @@ tenants regardless of the customer.
    *before* `make bootstrap`.
 3. **Proxy / TLS inspection.** If outbound traffic goes through a
    corporate proxy that intercepts TLS (e.g. Palo Alto, Zscaler), you
-   must add the proxy CA chain to `install-config.yaml` via
-   `additionalTrustBundle` and set `httpsProxy` / `noProxy` correctly.
-   Otherwise the bootstrap node will hang trying to pull RHCOS or
-   release images. See [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md)
-   for the noProxy template.
+   must plan the proxy URL(s), `noProxy`, and proxy CA chain before
+   install. Current automation does **not** yet render these from
+   `config/cluster.env`, so do not assume `make all` injects
+   `additionalTrustBundle` automatically. Otherwise the bootstrap node
+   can hang trying to pull RHCOS or release images with `x509` errors.
+   See [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md)
+   for the noProxy template and manual field reference.
 4. **Image-registry storage.** The image-registry operator tries to
    create its backing storage account by default. Tenant policies that
    block shared-key auth (`allowSharedKeyAccess=false`) will leave the

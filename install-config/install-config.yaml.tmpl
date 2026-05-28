@@ -45,6 +45,8 @@ platform:
     computeSubnet: __COMPUTE_SUBNET__
     outboundType: UserDefinedRouting
 publish: __PUBLISH__
+# Manual advanced placeholder: proxy/trust-bundle settings are not wired to
+# config/cluster.env yet. See docs/proxy-and-tls-inspection.md before enabling.
 # proxy:           # uncomment + fill if your egress path requires a proxy
 #   httpProxy:  http://proxy.platform.example.com:8080
 #   httpsProxy: http://proxy.platform.example.com:8080

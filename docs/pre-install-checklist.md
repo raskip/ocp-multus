@@ -50,7 +50,7 @@ overlap, **4–6 weeks** if items have to go sequentially.
 | 6 | Public parent DNS zone + write access | DNS team | 1–2 weeks | The repo creates a sub-zone (`${BASE_DOMAIN}` under `${PARENT_DNS_ZONE}`) and writes one NS-record into the parent. Your SP needs **DNS Zone Contributor** on the parent zone's resource group. | [`network-prereqs.md` §5](./network-prereqs.md) |
 | 7 | VNet (only if BYO-network) | network team | 1–2 weeks | Subnet sizing: control plane /27, workers /24, bootstrap /28 (room for bootstrap + uploader + optional Windows jump), Multus /24, SR-IOV-style /24. NSGs allow intra-cluster traffic. Hand them [`docs/network-prereqs.md`](./network-prereqs.md). If the cluster needs to talk to on-prem resources (or on-prem clients need to reach the cluster via `publish: Internal`), peer this spoke VNet to your hub VNet (the hub typically holds the ExpressRoute / S2S VPN gateway); see [`network-prereqs.md` §6](./network-prereqs.md#6-vnet-peering). | [`network-prereqs.md`](./network-prereqs.md), [`examples/network-prereqs-azcli/`](../examples/network-prereqs-azcli/) |
 | 8 | Outbound destinations allowed through your firewall / NVA | network-security team | 1–2 weeks | Vendor-neutral FQDN/IP/port list to add to your Palo Alto / Fortinet / Checkpoint / Azure Firewall rule base | [`required-outbound-destinations.md`](./required-outbound-destinations.md) |
-| 9 | Proxy CA bundle (only if TLS-inspecting proxy) | security team | days | Get the proxy's signing CA in PEM form. The repo injects it as `additionalTrustBundle` into `install-config.yaml`. | [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md) |
+| 9 | Proxy / TLS-inspection decision | security + network team | days | If your outbound path uses an HTTP proxy or terminates TLS, get the proxy URL(s), `noProxy` CIDRs/domains, and the PEM CA chain **before** `make all`. Current automation does **not** yet render `proxy:` / `additionalTrustBundle:` from `config/cluster.env`; do not assume the CA is injected automatically. Without this design, bootstrap/release image pulls can fail with `x509: certificate signed by unknown authority`. | [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md) |
 | 10 | Image-registry storage decision | security team | days | Tenants that block `allowSharedKeyAccess` cannot use the default registry storage. Pick: (A) `Removed` mode, (B) Entra-ID auth on a pre-created storage account, (C) emptyDir for PoC. | [`image-registry-options.md`](./image-registry-options.md) |
 | 11 | Jump-host access pattern (A/B/C/D) | network-security team | days | Decide before `make prereqs`. A = direct PIP (often blocked), B = hub-FW DNAT, C = Azure Bastion, D = private-only via VPN/ExpressRoute. The repo's Windows browser/RDP jump host is optional (`CREATE_WINDOWS_JUMP=true`) and not required for install; Linux/customer-provided jump hosts or Bastion are the normal patterns. | [`jump-host-access-decision.md`](./jump-host-access-decision.md), [`installer-host-requirements.md`](./installer-host-requirements.md) |
 | 12 | `ADMIN_SSH_SOURCE_IP` (your egress IP / VPN exit CIDR) | self or IT | minutes | `curl ifconfig.me` for personal, or ask IT for the corporate VPN exit CIDR. Used in NSG inbound rules for the uploader VM and for any jump-host pattern that permits SSH from your workstation/VPN. | [`config/cluster.example.env` line 67](../config/cluster.example.env) |
@@ -68,6 +68,10 @@ single-sub PoC is just pasting the same UUID into all three env
 vars — takes 10 seconds. The full guided flow is
 [`onboarding.md`](./onboarding.md); the condensed commands are
 [`quickstart.md`](./quickstart.md).
+
+Exception: if a TLS-inspecting proxy/firewall is in the outbound path,
+row **9** is not optional even for a PoC. Get the CA/proxy decision
+settled before install; the current repo does not auto-inject it.
 
 ## Cost callouts
 

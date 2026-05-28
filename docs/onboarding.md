@@ -27,7 +27,7 @@ that explains the tradeoffs and the tenant-policy considerations.
 | Azure identity model | [`azure-identity-options.md`](./azure-identity-options.md) | Service principal vs managed identity vs user. Some enterprise tenants block SPN creation outright. |
 | Installer host location | [`installer-host-requirements.md`](./installer-host-requirements.md) | The host running `openshift-install` needs specific network reach and RBAC; this is the most commonly missed prereq. |
 | Jump-host access pattern | [`jump-host-access-decision.md`](./jump-host-access-decision.md) | If `publish: Internal`, you need a way to reach the cluster API. Picks between direct PIP, firewall DNAT, Azure Bastion, or private-only. |
-| Outbound + proxy posture | [`required-outbound-destinations.md`](./required-outbound-destinations.md), [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md) | RHCOS nodes need to reach specific Red Hat / Microsoft / quay.io endpoints. If your tenant has a proxy or TLS-inspection, configure it now. |
+| Outbound + proxy posture | [`required-outbound-destinations.md`](./required-outbound-destinations.md), [`proxy-and-tls-inspection.md`](./proxy-and-tls-inspection.md) | RHCOS nodes need to reach specific Red Hat / Microsoft / quay.io endpoints. If your tenant has a proxy or TLS-inspection, resolve the proxy/CA design now; current automation does not auto-inject `proxy:` / `additionalTrustBundle` from `config/cluster.env`. |
 
 Outcome of Phase 0: you know your identity, your installer host, your
 jump-host pattern, and your proxy/firewall stance.
