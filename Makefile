@@ -202,6 +202,8 @@ SHUTDOWN_FLAGS    ?=
 STARTUP_FLAGS     ?=
 SCALE_FLAGS       ?=
 STATUS_FLAGS      ?=
+CREDENTIALS_DIR   ?=
+CREDENTIALS_FLAGS ?=
 
 etcd-backup:        ; bash scripts/cluster-etcd-backup.sh $(ETCD_BACKUP_FLAGS)
 cluster-shutdown:   ; bash scripts/cluster-shutdown.sh $(SHUTDOWN_FLAGS)
@@ -210,6 +212,7 @@ cluster-startup:    ; bash scripts/cluster-startup.sh $(STARTUP_FLAGS)
 workers-down:       ; bash scripts/cluster-scale-workers.sh down $(SCALE_FLAGS)
 workers-up:         ; bash scripts/cluster-scale-workers.sh up $(SCALE_FLAGS)
 cluster-status:     ; bash scripts/cluster-status.sh $(STATUS_FLAGS)
+save-credentials:   ; bash scripts/save-credentials.sh $(if $(strip $(CREDENTIALS_DIR)),--out "$(CREDENTIALS_DIR)",) $(CREDENTIALS_FLAGS)
 
 # ---- Post-install workarounds for restricted tenants (see docs/) ----
 # Patch the default IngressController to HostNetwork. Use when this repo's

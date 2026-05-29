@@ -46,6 +46,11 @@ If you have done UPI on Azure before and just want the commands, see
 manual walkthrough useful for debugging see
 [`docs/manual-install.md`](./docs/manual-install.md).
 
+After install checkpoints, run `make save-credentials` to capture local
+kubeconfig, kubeadmin password, Terraform state, SP JSON, and optional
+Windows jump-host credentials into a gitignored bundle. See
+[`docs/credential-backup.md`](./docs/credential-backup.md).
+
 ## What it deploys
 
 - Public DNS sub-zone delegation for the OpenShift base domain.

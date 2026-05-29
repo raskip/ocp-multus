@@ -121,11 +121,18 @@ make install-config
 #    Generates install/metadata.json containing the canonical infraID.
 make ignition
 
+# Save the first credential checkpoint: kubeconfig, kubeadmin password,
+# installer metadata, SP JSON, pull secret, SSH key, and local state.
+make save-credentials
+
 # 4. Subnets, NSGs, internal load balancers, private endpoint, uploader VM,
 #    and (only if CREATE_WINDOWS_JUMP=true) a Windows browser/RDP jump host.
 #    Auto-triggers `tfvars-refresh` which re-renders 01-network's auto.tfvars
 #    with infra_id = the canonical infraID from install/metadata.json.
 make network
+
+# Save network outputs, including optional Windows jump-host credentials.
+make save-credentials
 
 # 5. Upload RHCOS and create the Azure image
 make image
@@ -159,7 +166,12 @@ Wait for completion:
 
 ```bash
 ./openshift-install --dir=install wait-for install-complete --log-level=info
+make save-credentials
 ```
+
+See [`credential-backup.md`](./credential-backup.md) for what the
+bundle contains and how to use `CREDENTIALS_DIR` when you want a stable
+run folder.
 
 ## Post-install: ingress on a pre-created internal LB
 

@@ -77,6 +77,7 @@ make all                       # full install end-to-end (~60 min)
                                # bootstrap > control-plane > destroy-bootstrap >
                                # workers > install-complete
                                # YES=1 make all  → skip the cost prompt
+make save-credentials          # capture kubeconfig/passwords/state/outputs
 ```
 
 If your enterprise firewall/proxy terminates TLS, stop here and read
@@ -99,6 +100,12 @@ host. Set `CREATE_WINDOWS_JUMP=true` in `config/cluster.env` only if
 you explicitly want that convenience host for accessing an internal
 OpenShift console; otherwise use your chosen jump-host access pattern
 from [`jump-host-access-decision.md`](./jump-host-access-decision.md).
+
+Run [`make save-credentials`](./credential-backup.md) after major
+checkpoints, especially after `make ignition`, after `make network`, and
+after the install completes. It saves local cluster credentials,
+Terraform state, SP JSON, and optional Windows jump-host credentials into
+a gitignored bundle so they are not lost during cleanup or handover.
 
 ## 7. (Optional) Multus secondary-network demo
 

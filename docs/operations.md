@@ -16,6 +16,9 @@ cost without destroying it.
 > For scheduled / unattended use see [`scheduling.md`](./scheduling.md).
 > For the full per-script command reference see [`docs/scripts/`](./scripts/).
 > For CPU architecture choice (x86_64 vs arm64) see [`cpu-architecture.md`](./cpu-architecture.md).
+> For saving kubeconfig, kubeadmin password, Terraform state, SP JSON, and
+> optional Windows jump-host credentials see
+> [`credential-backup.md`](./credential-backup.md).
 
 Why not just `az vm deallocate`? Because OpenShift's control plane runs etcd,
 a distributed consensus store. Yanking power away from etcd VMs without first
@@ -36,6 +39,7 @@ back up. Red Hat documents the exact sequence we automate here:
 | Bring workers back, leave masters as-is | `workers-up` |
 | Snapshot etcd for safety | `etcd-backup` |
 | Verify cluster + Azure state | `cluster-status` |
+| Save local install credentials/state | `save-credentials` |
 
 `cluster-shutdown` saves the most compute cost. `workers-down` is useful when
 you still want to log in and inspect the cluster but don't need workloads
@@ -451,4 +455,3 @@ Pipelines at a glance.
 - Hibernation (this is UPI, not Azure Red Hat OpenShift / ARO — ARO has its own managed hibernation feature).
 - Cross-region failover.
 - Automated cost reporting.
-
