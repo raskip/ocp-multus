@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # scripts/preflight/06-dns-zone.sh
 #
-# Verify the parent DNS zone exists and is writable by the current
-# identity. Required because terraform/00-prereqs creates the sub-zone
-# (base_domain) as a child of parent_dns_zone and writes the NS
-# delegation record. May live in a different subscription
-# (dns_subscription_id) — we handle that via --subscription flags.
+# Verify the parent DNS zone exists and that the current identity has
+# both permissions required by terraform/00-prereqs:
+#   1. DNS RG-scope rights to create/manage the child public zone
+#      (base_domain).
+#   2. parent-zone rights to write the NS delegation record.
+# May live in a different subscription (dns_subscription_id) — we handle
+# that via --subscription flags.
 #
 # Read-only — only `az network dns zone show` and a role-assignment
 # probe. Does not create or modify any record.
@@ -14,7 +16,7 @@ set -uo pipefail
 # shellcheck source=_lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 
-pf_section "06: parent DNS zone + delegation permission"
+pf_section "06: public DNS zone + delegation permissions"
 
 pf_load_config || return 0
 pf_require_cmd az "" || return 0
@@ -47,14 +49,27 @@ pf_pass "parent DNS zone $PARENT_ZONE exists in $PARENT_RG"
 ZONE_ID=$(jq -r '.id' <<< "$ZONE_JSON")
 pf_info "zone id: $ZONE_ID"
 
-# Check the current identity can write NS records on the parent zone.
-# DNS Zone Contributor (or higher) on the zone or the RG is sufficient.
 PRINCIPAL_ID=""
-SP_JSON="${AZURE_AUTH_LOCATION:-$HOME/.azure/osServicePrincipal.json}"
+if [[ -n "${AZURE_AUTH_LOCATION:-}" ]]; then
+  SP_JSON="$AZURE_AUTH_LOCATION"
+elif [[ -n "${AZURE_SP_JSON:-}" ]]; then
+  SP_JSON="$AZURE_SP_JSON"
+elif [[ -n "${AZURE_CONFIG_DIR:-}" ]]; then
+  SP_JSON="$AZURE_CONFIG_DIR/osServicePrincipal.json"
+else
+  SP_JSON="$HOME/.azure/osServicePrincipal.json"
+fi
 if [[ -f "$SP_JSON" ]]; then
   CLIENT_ID=$(jq -r '.clientId // empty' "$SP_JSON" 2>/dev/null || true)
   if [[ -n "$CLIENT_ID" ]]; then
     PRINCIPAL_ID=$(az ad sp show --id "$CLIENT_ID" --query id -o tsv 2>/dev/null || true)
+  fi
+fi
+if [[ -z "$PRINCIPAL_ID" ]]; then
+  ACCOUNT_USER=$(az account show --query user.name -o tsv 2>/dev/null || true)
+  ACCOUNT_TYPE=$(az account show --query user.type -o tsv 2>/dev/null || true)
+  if [[ "$ACCOUNT_TYPE" == "servicePrincipal" && -n "$ACCOUNT_USER" ]]; then
+    PRINCIPAL_ID=$(az ad sp show --id "$ACCOUNT_USER" --query id -o tsv 2>/dev/null || true)
   fi
 fi
 [[ -z "$PRINCIPAL_ID" ]] && PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)
@@ -64,17 +79,32 @@ if [[ -z "$PRINCIPAL_ID" ]]; then
   return 0
 fi
 
-WRITE_OK=$(az role assignment list --assignee "$PRINCIPAL_ID" --scope "$ZONE_ID" -o json 2>/dev/null \
-  | jq -r 'any(.[]; .roleDefinitionName | IN("DNS Zone Contributor", "Contributor", "Owner"))')
+DNS_SUB_EFFECTIVE="${DNS_SUB:-$(az account show --query id -o tsv 2>/dev/null || true)}"
+RG_SCOPE="/subscriptions/${DNS_SUB_EFFECTIVE}/resourceGroups/$PARENT_RG"
 
-if [[ "$WRITE_OK" != "true" ]]; then
-  # fallback: check RG-level
-  RG_SCOPE="/subscriptions/${DNS_SUB:-$(az account show --query id -o tsv)}/resourceGroups/$PARENT_RG"
-  WRITE_OK=$(az role assignment list --assignee "$PRINCIPAL_ID" --scope "$RG_SCOPE" -o json 2>/dev/null \
-    | jq -r 'any(.[]; .roleDefinitionName | IN("DNS Zone Contributor", "Contributor", "Owner"))')
+has_dns_role() {
+  local scope="$1"
+  az role assignment list --assignee "$PRINCIPAL_ID" --scope "$scope" --include-inherited -o json 2>/dev/null \
+    | jq -r 'any(.[]; .roleDefinitionName | IN("DNS Zone Contributor", "Contributor", "Owner"))'
+}
+
+# Terraform creates and tags the child public zone ${BASE_DOMAIN} in this
+# resource group. Parent-zone scoped DNS rights alone are not enough.
+RG_WRITE_OK=$(has_dns_role "$RG_SCOPE")
+if [[ "$RG_WRITE_OK" == "true" ]]; then
+  pf_pass "current identity can manage public child DNS zones in RG $PARENT_RG"
+else
+  pf_fail "current identity has no DNS Zone Contributor / Contributor / Owner on DNS resource group $PARENT_RG"
+  pf_info "why: terraform/00-prereqs creates/tags child public zone ${BASE_DOMAIN_FROM_TF:-<base_domain>} in this RG; parent-zone scoped rights alone are not enough"
+  pf_info "fix: az role assignment create --assignee $PRINCIPAL_ID --role 'DNS Zone Contributor' --scope $RG_SCOPE"
 fi
 
-if [[ "$WRITE_OK" == "true" ]]; then
+ZONE_WRITE_OK=$(has_dns_role "$ZONE_ID")
+if [[ "$ZONE_WRITE_OK" != "true" && "$RG_WRITE_OK" == "true" ]]; then
+  ZONE_WRITE_OK="true"
+fi
+
+if [[ "$ZONE_WRITE_OK" == "true" ]]; then
   pf_pass "current identity can write NS delegation to $PARENT_ZONE"
 else
   pf_fail "current identity has no DNS Zone Contributor / Contributor / Owner on $PARENT_ZONE"

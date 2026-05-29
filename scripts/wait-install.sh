@@ -14,6 +14,7 @@ INSTALL_DIR="${INSTALL_DIR:-$REPO_ROOT/install}"
 KUBECONFIG="${KUBECONFIG:-$INSTALL_DIR/auth/kubeconfig}"
 export KUBECONFIG
 AUTO_INGRESS_HOSTNETWORK="${AUTO_INGRESS_HOSTNETWORK:-true}"
+AUTO_IMAGE_REGISTRY_REMOVED="${AUTO_IMAGE_REGISTRY_REMOVED:-true}"
 
 [[ -x "$INSTALLER" ]] || { echo "missing openshift-install at $INSTALLER (run 'make tools')" >&2; exit 1; }
 [[ -x "$OC" ]] || { echo "missing oc at $OC (run 'make tools')" >&2; exit 1; }
@@ -68,14 +69,57 @@ auto_ingress_hostnetwork() {
   echo "[auto-ingress] WARN: default IngressController was not observed before timeout; if install-complete hangs, run 'make ingress-hostnetwork' manually." >&2
 }
 
+auto_image_registry_removed() {
+  local deadline state
+  deadline=$(( $(date +%s) + 45 * 60 ))
+
+  echo "[auto-registry] waiting for image-registry config to exist..."
+  while (( $(date +%s) < deadline )); do
+    state="$("$OC" get configs.imageregistry.operator.openshift.io/cluster \
+      -o jsonpath='{.spec.managementState}' 2>/dev/null || true)"
+
+    case "$state" in
+      Removed)
+        echo "[auto-registry] image-registry already has managementState=Removed."
+        return 0
+        ;;
+      Managed|Unmanaged|"")
+        if [[ -n "$state" ]]; then
+          echo "[auto-registry] setting image-registry managementState=Removed for PoC install completion."
+          if "$OC" patch configs.imageregistry.operator.openshift.io/cluster \
+              --type=merge \
+              -p '{"spec":{"managementState":"Removed"}}' >/dev/null; then
+            echo "[auto-registry] image-registry Removed fallback applied."
+          else
+            echo "[auto-registry] WARN: image-registry Removed fallback failed; if install-complete hangs, run 'make image-registry-removed' manually or configure registry storage." >&2
+          fi
+          return 0
+        fi
+        ;;
+      *)
+        echo "[auto-registry] image-registry managementState is '$state'; leaving it unchanged."
+        return 0
+        ;;
+    esac
+
+    sleep 15
+  done
+
+  echo "[auto-registry] WARN: image-registry config was not observed before timeout; if install-complete hangs, run 'make image-registry-removed' manually or configure registry storage." >&2
+}
+
 # Background the CSR-approver; ensure it dies when this script exits.
 approve_loop &
 APPROVER_PID=$!
 INGRESS_PID=""
+REGISTRY_PID=""
 cleanup() {
   kill "$APPROVER_PID" 2>/dev/null || true
   if [[ -n "$INGRESS_PID" ]]; then
     kill "$INGRESS_PID" 2>/dev/null || true
+  fi
+  if [[ -n "$REGISTRY_PID" ]]; then
+    kill "$REGISTRY_PID" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT
@@ -89,6 +133,18 @@ case "${AUTO_INGRESS_HOSTNETWORK,,}" in
     ;;
   *)
     echo "[wait-install] Auto HostNetwork ingress helper disabled (AUTO_INGRESS_HOSTNETWORK=$AUTO_INGRESS_HOSTNETWORK)."
+    ;;
+esac
+
+case "${AUTO_IMAGE_REGISTRY_REMOVED,,}" in
+  1|true|yes|y)
+    auto_image_registry_removed &
+    REGISTRY_PID=$!
+    echo "[wait-install] Auto image-registry Removed helper started (pid=$REGISTRY_PID)."
+    ;;
+  *)
+    echo "[wait-install] Auto image-registry Removed helper disabled (AUTO_IMAGE_REGISTRY_REMOVED=$AUTO_IMAGE_REGISTRY_REMOVED)."
+    echo "[wait-install] If install-complete hangs on image-registry, configure registry storage or run 'make image-registry-removed'."
     ;;
 esac
 

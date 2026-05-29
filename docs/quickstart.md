@@ -92,8 +92,10 @@ are idempotent, and `make ignition` reuses existing `install/*.ign`
 assets once `install/metadata.json` exists so reruns do not rotate the
 cluster infraID or delete `install/auth/`. To intentionally rebuild the
 installer state, run `make clean-install` first (or use `FORCE=1 make
-ignition`). CSR approval and the default HostNetwork ingress conversion
-are handled automatically by the `wait-install` step.
+ignition`). CSR approval, the default HostNetwork ingress conversion,
+and the PoC image-registry `Removed` fallback are handled automatically
+by the `wait-install` step. Set `AUTO_IMAGE_REGISTRY_REMOVED=false` if
+you will configure managed registry storage yourself.
 
 `make all` does **not** require the optional Windows browser/RDP jump
 host. Set `CREATE_WINDOWS_JUMP=true` in `config/cluster.env` only if

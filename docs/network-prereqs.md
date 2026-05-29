@@ -137,10 +137,14 @@ for the FQDN/IP allow-list the firewall must permit.
 ## 5. DNS
 
 - **Parent zone** (e.g. `example.com`, or a sub-zone delegated to your
-  team): pre-exists in Azure DNS. The installer's identity needs `DNS
-  Zone Contributor` (or equivalent) on this zone so it can add an `NS`
-  delegation for the cluster sub-zone.
-- **Cluster sub-zone** (e.g. `ocp.example.com`): created by the
+  team): pre-exists in Azure DNS.
+- **Public child zone** (e.g. `ocp.example.com`): created by Terraform
+  in the DNS resource group, then delegated from the parent zone with an
+  `NS` record. The installer's identity needs `DNS Zone Contributor` (or
+  equivalent) on the DNS resource group that contains the parent zone and
+  receives this child zone. Parent-zone-only scope is not enough for the
+  default Terraform path.
+- **Cluster private zone** (e.g. `lab.ocp.example.com`): created by the
   installer in the workload RG. It contains `api`, `api-int`, and
   `*.apps` A-records pointing at the internal LB.
 - **`privatelink.blob.core.windows.net` private DNS zone**:

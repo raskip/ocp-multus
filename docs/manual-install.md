@@ -163,14 +163,21 @@ while true; do
 done
 ```
 
-Wait for completion. For the default topology, this target also switches
-the default IngressController to `HostNetwork` so it uses the
-repo-created internal apps LB instead of provisioning a second cloud LB:
+Wait for completion. For the default PoC topology, this target also:
+
+- switches the default IngressController to `HostNetwork` so it uses the
+  repo-created internal apps LB instead of provisioning a second cloud LB
+- sets the image-registry operator to `Removed` so tenants that block
+  storage shared-key access do not hang the first install
 
 ```bash
 make wait-install
 make save-credentials
 ```
+
+If you want a managed internal image registry during install, configure
+the registry storage option first and run
+`AUTO_IMAGE_REGISTRY_REMOVED=false make wait-install`.
 
 See [`credential-backup.md`](./credential-backup.md) for what the
 bundle contains and how to use `CREDENTIALS_DIR` when you want a stable

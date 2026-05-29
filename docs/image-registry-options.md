@@ -7,9 +7,19 @@ shared-key auth at the storage-account or subscription level
 (e.g. `allowSharedKeyAccess=false` enforced by policy), which leaves
 the operator in `Available=False, Degraded=True` after install.
 
-This page covers the three working patterns. Pick one before
-`make wait-install`, or set the operator to **Removed** during install
-and choose a final option as Day-2 work.
+This page covers the three working patterns. The repo's default PoC
+flow sets the operator to **Removed** during `make wait-install` so a
+restricted storage policy does not block first install. Choose a final
+option as Day-2 work, or opt out and configure managed registry storage
+before install.
+
+```bash
+# Default: AUTO_IMAGE_REGISTRY_REMOVED=true
+make wait-install
+
+# Opt out when you have configured managed registry storage yourself
+AUTO_IMAGE_REGISTRY_REMOVED=false make wait-install
+```
 
 ## Symptoms when the default flow is blocked
 
@@ -26,7 +36,9 @@ oc -n openshift-image-registry logs deploy/cluster-image-registry-operator | tai
 ```
 
 A degraded image-registry blocks `openshift-install wait-for install-complete`
-from going Available. Pick an option below.
+from going Available. The default wait-install helper applies Option A
+below automatically for PoC success; pick another option when you need
+the in-cluster registry.
 
 ## Option A — Removed (simplest, smallest blast radius)
 

@@ -181,6 +181,9 @@ _cost-prompt:
 #   5. wait-install — approves worker CSRs and automatically converts the
 #      default IngressController to HostNetwork for this repo's pre-created
 #      internal apps LB (set AUTO_INGRESS_HOSTNETWORK=false to disable).
+#      It also sets image-registry managementState=Removed by default for
+#      PoC installs in restricted tenants (set AUTO_IMAGE_REGISTRY_REMOVED=false
+#      if you will configure managed registry storage yourself).
 #
 # Running network BEFORE ignition (the prior order) caused infra_id to fall back
 # to ${CLUSTER_NAME}-poc, producing TF resources that did not match the names

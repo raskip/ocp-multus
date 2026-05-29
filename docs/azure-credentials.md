@@ -61,7 +61,7 @@ corresponding role:
 | Cluster subscription | Reader | Owner / User Access Administrator / Role Based Access Control Administrator at subscription scope. |
 | Workload resource group | Contributor | Owner / User Access Administrator / Role Based Access Control Administrator on that RG or subscription. If the repo is expected to create the RG, the identity running `make prereqs` also needs permission to create resource groups at subscription scope, or the RG must be pre-created by the platform team. |
 | VNet / network resource group | Network Contributor (or Contributor) | Owner / User Access Administrator / Role Based Access Control Administrator on the network RG or subscription. |
-| Public parent DNS zone or its RG | DNS Zone Contributor | DNS-zone owner, usually a DNS/platform team. |
+| Public DNS resource group that contains the parent zone and receives the child zone | DNS Zone Contributor | DNS/platform team. Required because the default Terraform path creates/tags the child public zone `${BASE_DOMAIN}` in this RG and writes the NS delegation into the parent zone. Parent-zone-only scope is not enough. |
 | Private DNS zone `privatelink.blob.core.windows.net` or its RG | Private DNS Zone Contributor | Private-DNS / connectivity owner. |
 | Installer storage account / workload RG | Storage Blob Data Owner for the install principal, or permission for Terraform to create that assignment | Owner / User Access Administrator / Role Based Access Control Administrator on the storage account, workload RG, or subscription. |
 
