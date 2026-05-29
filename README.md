@@ -19,7 +19,8 @@ tenant. Don't start the install before you have them.
 
 **→ [`docs/pre-install-checklist.md`](./docs/pre-install-checklist.md)** —
 single page you can forward to your DNS / network / Entra / subscription
-teams in parallel.
+teams in parallel. It also includes an install-phase access map so the
+customer knows when each team has to be available.
 
 ## 👉 New here? Start with the onboarding playbook
 
@@ -60,7 +61,9 @@ The default topology is internal: `publish: Internal`. A Windows
 browser/RDP jump host is available as an opt-in convenience
 (`CREATE_WINDOWS_JUMP=true`) but is not required for `make all`;
 use your existing VPN/ExpressRoute path, a Linux jump host, hub-FW
-DNAT, or Azure Bastion when that fits your tenant better.
+DNAT, or Azure Bastion when that fits your tenant better. See
+[`docs/accessing-the-cluster.md`](./docs/accessing-the-cluster.md)
+for endpoint, DNS, and access-path details.
 
 > **Enterprise TLS-inspection warning:** if your outbound path uses a
 > TLS-inspecting proxy/firewall, plan the OpenShift `proxy:` and

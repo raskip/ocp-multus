@@ -62,8 +62,14 @@ so treat it as a pre-workshop design item.
 The identity that runs `terraform` and `openshift-install` needs both
 **install-time** and **runtime** rights. Manual cloud-credential mode
 does *not* let you skip the runtime grants — see
-`docs/azure-identity-options.md` (added in a separate PR) for the full
-breakdown.
+[`docs/azure-identity-options.md`](./azure-identity-options.md) for the
+full breakdown.
+
+The person or automation that **grants** these roles needs separate
+setup permissions (`Microsoft.Authorization/roleAssignments/write` at
+each scope, plus Entra app-registration permission to create the SP).
+See [`azure-credentials.md`](./azure-credentials.md#permissions-the-person-setting-up-the-sp-needs)
+before opening access requests.
 
 | Scope | Role(s) | Why |
 |---|---|---|
@@ -71,11 +77,18 @@ breakdown.
 | Workload resource group (`$WORKLOAD_RESOURCE_GROUP`) | **Contributor** | Cluster runtime creates load balancers, public IPs, disks, etc. |
 | Network resource group (`$NETWORK_RESOURCE_GROUP`) | **Network Contributor** | Cluster runtime updates NSG rules + adds backend pool members. |
 | Parent DNS resource group (`$PARENT_DNS_RESOURCE_GROUP`) | **DNS Zone Contributor** (cross-sub) | `make prereqs` adds the sub-zone NS-record into the parent zone. |
+| Private DNS RG / zone for `privatelink.blob.core.windows.net` | **Private DNS Zone Contributor** | `make network` creates the storage Private Endpoint DNS A-record and VNet link. |
+| Installer storage account / workload RG | **Storage Blob Data Owner** data-plane access, or permission for Terraform to create that assignment | RHCOS and ignition uploads need blob data-plane access when shared-key auth is disabled. |
 
 For BYO-network deployments (set `manage_network_resources = false`
 in `terraform/01-network/`) you can scope the network role tighter —
 see [`docs/network-prereqs.md`](./network-prereqs.md) for the minimum
 NSG / route table / subnet rights.
+
+If your platform team pre-creates the workload RG, grant the install SP
+Contributor on that RG before `make prereqs`. If the repo is expected to
+create the workload RG itself, the identity running `make prereqs` also
+needs permission to create resource groups in the cluster subscription.
 
 ## 3. Filesystem state
 

@@ -6,6 +6,69 @@ cleanup. For *which* identity model to pick (single SP vs per-operator
 SPs vs Workload Identity Federation), see
 [`azure-identity-options.md`](./azure-identity-options.md).
 
+## Permissions the person setting up the SP needs
+
+Keep two identities separate:
+
+1. **Provisioning operator** — the human or automation that creates the
+   Entra application / Service Principal and grants Azure roles.
+2. **Install Service Principal** — the identity saved in
+   `~/.azure/osServicePrincipal.json` and used by `terraform`,
+   `openshift-install`, and the cluster runtime.
+
+The provisioning operator needs temporary setup rights; the install SP
+gets the scoped runtime rights described in
+[`azure-identity-options.md`](./azure-identity-options.md).
+
+### 1. Create the Entra application / Service Principal
+
+`az ad sp create-for-rbac --skip-assignment` creates an Entra
+application, Service Principal, and client secret. It does **not** grant
+Azure RBAC roles.
+
+To run it, the provisioning operator needs one of:
+
+| Tenant setting / role | When it is enough |
+|---|---|
+| Tenant allows users to register applications | Any normal member can create the app registration and SP. |
+| **Application Developer** | Least-privilege Entra role when app registration is restricted. |
+| **Cloud Application Administrator** / **Application Administrator** | Broader Entra roles that can also create and manage app registrations and secrets. |
+| **Global Administrator** | Works, but should be a break-glass / PIM path, not the normal request. |
+
+Many enterprise tenants use Privileged Identity Management (PIM). If so,
+activate the directory role **before** running `az ad sp
+create-for-rbac`.
+
+### 2. Assign Azure RBAC roles to the install SP
+
+`az role assignment create` requires the provisioning operator to hold a
+role that includes `Microsoft.Authorization/roleAssignments/write` at
+the scope being assigned. Common built-in choices:
+
+| Role | Use |
+|---|---|
+| **User Access Administrator** | Least-privilege common role for role-assignment work only. |
+| **Role Based Access Control Administrator** | Role-assignment administration without full Owner rights. |
+| **Owner** | Full control, including role assignments. Use only if your governance model allows it. |
+| Custom role with `Microsoft.Authorization/roleAssignments/write` | Use when your organisation has a custom least-privilege role. |
+
+The scope matters. If DNS, networking, or private DNS live in different
+subscriptions / resource groups, the owner of each scope must grant the
+corresponding role:
+
+| Target scope | Role granted to install SP | Who can grant it |
+|---|---|---|
+| Cluster subscription | Reader | Owner / User Access Administrator / Role Based Access Control Administrator at subscription scope. |
+| Workload resource group | Contributor | Owner / User Access Administrator / Role Based Access Control Administrator on that RG or subscription. If the repo is expected to create the RG, the identity running `make prereqs` also needs permission to create resource groups at subscription scope, or the RG must be pre-created by the platform team. |
+| VNet / network resource group | Network Contributor (or Contributor) | Owner / User Access Administrator / Role Based Access Control Administrator on the network RG or subscription. |
+| Public parent DNS zone or its RG | DNS Zone Contributor | DNS-zone owner, usually a DNS/platform team. |
+| Private DNS zone `privatelink.blob.core.windows.net` or its RG | Private DNS Zone Contributor | Private-DNS / connectivity owner. |
+| Installer storage account / workload RG | Storage Blob Data Owner for the install principal, or permission for Terraform to create that assignment | Owner / User Access Administrator / Role Based Access Control Administrator on the storage account, workload RG, or subscription. |
+
+The provisioning operator does **not** need to stay privileged after the
+roles are assigned. In PIM environments, activate the role, grant the
+scoped assignments, run `make preflight`, and let the activation expire.
+
 ## File location and format
 
 ```

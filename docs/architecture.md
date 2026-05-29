@@ -35,6 +35,20 @@ flowchart TB
   VNET --> SRIOV
 ```
 
+## Subnet layout and node counts
+
+[`network-prereqs.md` section 2](./network-prereqs.md#2-subnet-sizing) is the source of truth for subnet names, sizing guidance, and CIDR planning. The values below are illustrative examples only; do not copy them without confirming your assigned address space.
+
+| Subnet name | Example CIDR only | Purpose |
+|---|---|---|
+| `snet-ocp-master` | `10.20.0.0/27` | Control-plane primary NICs and the internal API/MCS load balancer. |
+| `snet-ocp-worker` | `10.20.1.0/24` | Worker primary NICs and the internal `*.apps` ingress load balancer. |
+| `snet-ocp-bootstrap` | `10.20.2.0/28` | Transient bootstrap VM, uploader VM, and the optional Windows browser/RDP jump host when `CREATE_WINDOWS_JUMP=true`. |
+| `snet-ocp-multus` | `10.20.3.0/24` | Secondary NICs used by Multus macvlan validation pods. |
+| `snet-ocp-sriov` | `10.20.4.0/27` | Optional dedicated accelerated NICs for host-device / SR-IOV-style validation. |
+
+The OpenShift control plane is fixed at **3 control-plane nodes**. The worker pool starts at **2 workers** and can scale to **N workers** as workload needs grow. When `enable_sriov_worker=true`, Terraform can add one optional host-device / SR-IOV-style worker with a dedicated accelerated NIC; see the [data-path contrast](#data-path-contrast-default-cni-vs-macvlan-vs-host-device) for how pods use that NIC.
+
 ## Terraform stages
 
 | Stage | Purpose |

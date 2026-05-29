@@ -13,9 +13,10 @@ or read [`quickstart.md`](./quickstart.md) for the condensed flow.
 > firewall allowlist your tenant needs. See
 > [`pre-install-checklist.md`](./pre-install-checklist.md) — single page
 > you can forward to your DNS / network / Entra / subscription teams
-> in parallel. **Procurement** (gather things from owners outside this
-> repo) and **decisions** (pick a pattern from the options below) are
-> two separate workstreams; Pre-0 is the former, Phase 0 is the latter.
+> in parallel. It also maps each install phase to the access and team
+> needed at that point. **Procurement** (gather things from owners outside
+> this repo) and **decisions** (pick a pattern from the options below)
+> are two separate workstreams; Pre-0 is the former, Phase 0 is the latter.
 
 ## Phase 0 — One-time decisions
 
@@ -153,6 +154,7 @@ Azure DevOps).
 | arm64 vs x86_64 gotchas | [`arm64-gotchas.md`](./arm64-gotchas.md) |
 | Service principal vs managed identity details | [`azure-credentials.md`](./azure-credentials.md) |
 | Architecture diagrams | [`architecture.md`](./architecture.md), [`architecture-ascii.md`](./architecture-ascii.md) |
+| Cluster access paths | [`accessing-the-cluster.md`](./accessing-the-cluster.md) |
 | CPU architecture mapping | [`cpu-architecture.md`](./cpu-architecture.md) |
 | Full operations runbook | [`operations.md`](./operations.md) |
 | Manual install walkthrough (per `make` target) | [`manual-install.md`](./manual-install.md) |
