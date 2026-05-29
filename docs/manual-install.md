@@ -316,15 +316,19 @@ tenants regardless of the customer.
 4. **Image-registry storage.** The image-registry operator tries to
    create its backing storage account by default. Tenant policies that
    block shared-key auth (`allowSharedKeyAccess=false`) will leave the
-   operator in `Available=False, Degraded=True`. See
+   operator in `Available=False, Degraded=True`. `make wait-install`
+   sets it to `Removed` by default for PoC success; set
+   `AUTO_IMAGE_REGISTRY_REMOVED=false` only after configuring managed
+   registry storage. See
    [`image-registry-options.md`](./image-registry-options.md) for the
-   three workarounds (Removed, AAD/MI auth, pre-created storage account).
+   registry options.
 5. **Ingress LoadBalancerService vs pre-created internal LB.** If you
    pre-create an internal apps LB in Terraform, the default
    `IngressController` (LoadBalancerService type) will conflict and the
-   `*.apps` route will not work until you patch the IngressController to
-   `HostNetwork`. See the post-install ingress section above
-   (`make ingress-hostnetwork`).
+   `*.apps` route will not work until the IngressController uses
+   `HostNetwork`. `make wait-install` runs that conversion automatically
+   for the default topology; `make ingress-hostnetwork` remains the
+   manual recovery command.
 6. **Lifecycle scripts need `oc` on PATH and an active `az`.** After
    `make tools`, copy `./oc` to a PATH location (or `export PATH=$PWD:$PATH`),
    and ensure `az` is logged in (or set

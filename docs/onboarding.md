@@ -108,10 +108,10 @@ These are handled by `make all` when the relevant condition applies,
 but you should know what they do in case you need to re-run them:
 
 - **Image registry storage** — On tenants that block shared-key
-  storage access, the default `image-registry` Operator fails. Read
-  [`image-registry-options.md`](./image-registry-options.md) for the
-  three workarounds (managed identity + RBAC, ephemeral emptyDir, or
-  bring-your-own PVC).
+  storage access, the default `image-registry` Operator can fail. The
+  PoC flow sets it to `Removed` during `make wait-install`; read
+  [`image-registry-options.md`](./image-registry-options.md) before
+  opting out or choosing a managed registry option.
 - **Multus demo PodSecurity** — The optional Multus validation
   manifests in `manifests/multus/` need PodSecurity Admission labels
   on OpenShift 4.14+. The manifests already include them; if you

@@ -45,7 +45,7 @@ private IP lives in `MACHINE_NETWORK_CIDR`.
 | `make wait-bootstrap`     | ✅ | resolves `api.<cluster>.<base>` | – | **✅** | First moment the installer host must reach the cluster API. |
 | `make destroy-bootstrap`  | ✅ | – | – | – | Removes the bootstrap VM. |
 | `make workers`            | ✅ | – | – | ✅ | Worker kubelets create CSRs that the installer host must approve via the API LB. |
-| `make wait-install`       | ✅ | resolves cluster FQDNs | – | **✅** | Backgrounds the CSR approver + waits for all ClusterOperators Available. |
+| `make wait-install`       | ✅ | resolves cluster FQDNs | – | **✅** | Backgrounds the CSR approver, applies default HostNetwork ingress + image-registry Removed fallbacks, then waits for all ClusterOperators Available. |
 | `make destroy`            | ✅ | – | – | – | Tears everything down in reverse order. |
 
 If any of those checkmarks is impossible from the installer host's

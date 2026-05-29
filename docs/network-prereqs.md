@@ -144,9 +144,11 @@ for the FQDN/IP allow-list the firewall must permit.
   equivalent) on the DNS resource group that contains the parent zone and
   receives this child zone. Parent-zone-only scope is not enough for the
   default Terraform path.
-- **Cluster private zone** (e.g. `lab.ocp.example.com`): created by the
-  installer in the workload RG. It contains `api`, `api-int`, and
-  `*.apps` A-records pointing at the internal LB.
+- **Cluster private zone** (e.g. `lab.ocp.example.com`): created by
+  Terraform in the workload RG. The network stack writes the static
+  `api` and `api-int` records; the ingress operator writes `*.apps`
+  after `make wait-install` converts the default IngressController to
+  HostNetwork.
 - **`privatelink.blob.core.windows.net` private DNS zone**:
   pre-exists, linked to the cluster spoke VNet. The installer adds an
   A-record for the storage Private Endpoint to this zone.
