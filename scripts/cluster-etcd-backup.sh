@@ -36,7 +36,7 @@ done
 
 load_config
 require_oc
-require_cmd jq tar base64
+require_cmd jq tar base64 awk gzip
 
 # Pick a Ready master if the caller did not specify one.
 if [[ -z "$NODE" ]]; then
@@ -69,9 +69,9 @@ EXPIRY=$(cert_expiry || echo "")
 
 log_step "running /usr/local/bin/cluster-backup.sh on $NODE"
 REMOTE_OUT_DIR="/var/home/core/backup-${TS}"
-# Important: the cluster-backup.sh script writes progress to stdout. We
-# redirect ALL non-base64 output to stderr so the only thing emitted on
-# stdout is the base64-encoded tarball we want to capture locally.
+# Important: oc debug and backup helper processes can emit informational text
+# to stdout. Delimit the payload explicitly; do not rely on "base64-looking"
+# line filtering because ordinary log text can accidentally match that shape.
 oc debug "node/${NODE}" --quiet --to-namespace=default -- chroot /host bash -c "
   set -euo pipefail
   rm -rf '${REMOTE_OUT_DIR}' >&2
@@ -79,15 +79,36 @@ oc debug "node/${NODE}" --quiet --to-namespace=default -- chroot /host bash -c "
   /usr/local/bin/cluster-backup.sh '${REMOTE_OUT_DIR}' >&2
   cd '${REMOTE_OUT_DIR}'
   tar -czf /tmp/etcd-backup-${TS}.tar.gz . >&2
+  echo __OCP_ETCD_BACKUP_BEGIN__
   base64 -w0 < /tmp/etcd-backup-${TS}.tar.gz
   echo
+  echo __OCP_ETCD_BACKUP_END__
   rm -f /tmp/etcd-backup-${TS}.tar.gz >&2
-" | grep -E '^[A-Za-z0-9+/=]+$' > "$DEST/etcd-backup.b64"
-# B43: filter to base64-only lines. `oc debug node` and child processes
-# (cluster-backup.sh, cert-checker, etcdctl) may emit informational text
-# to stdout despite `--quiet` and explicit `>&2` redirects. Without this
-# filter, `base64 -d` later fails with "invalid input". The trailing
-# `echo` ensures the base64 payload is on its own line for the grep.
+" | awk '
+  { sub(/\r$/, "") }
+  /^__OCP_ETCD_BACKUP_BEGIN__$/ {
+    if (!found && !capture) {
+      capture = 1
+      payload = ""
+    }
+    next
+  }
+  /^__OCP_ETCD_BACKUP_END__$/ {
+    if (capture && !found) {
+      found = 1
+      capture = 0
+    }
+    next
+  }
+  capture && !found { payload = payload $0 }
+  END {
+    if (found && payload != "") {
+      print payload
+    } else {
+      exit 42
+    }
+  }
+' > "$DEST/etcd-backup.b64"
 
 if [[ ! -s "$DEST/etcd-backup.b64" ]]; then
   log_err "remote backup produced no output; aborting"
@@ -98,6 +119,7 @@ log_step "decoding backup tarball locally"
 base64 -d "$DEST/etcd-backup.b64" > "$DEST/etcd-backup.tar.gz"
 rm -f "$DEST/etcd-backup.b64"
 
+gzip -t "$DEST/etcd-backup.tar.gz"
 tar -xzf "$DEST/etcd-backup.tar.gz" -C "$DEST"
 rm -f "$DEST/etcd-backup.tar.gz"
 
