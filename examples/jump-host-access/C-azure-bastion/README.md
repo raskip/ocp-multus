@@ -1,14 +1,19 @@
-# Pattern C — Azure Bastion (recommended enterprise default)
+# Pattern C — Azure Bastion (optional enterprise access pattern)
 
-Deploys **Azure Bastion** into the spoke VNet. No public IP on the
-jump VM, no DNAT, no firewall rules. You tunnel through the Bastion
-host from your workstation using `az network bastion ssh` or
-`az network bastion tunnel`.
+The main repo install does **not** deploy Azure Bastion. Use this
+separate example only when you explicitly choose Bastion as the access
+pattern for a private cluster. No public IP is needed on the jump VM, no
+DNAT, no firewall rules. You tunnel through the Bastion host from your
+workstation using `az network bastion ssh` or `az network bastion
+tunnel`.
 
-This is the recommended default for enterprise tenants where
+This is often a good fit for enterprise tenants where
 `Microsoft.Network/publicIPAddresses` is restricted by policy: Azure
 Bastion is *expected* to have a public IP (it is a managed service)
 and most tenant policies whitelist it explicitly.
+
+This example is also code-level opt-in: Terraform creates **nothing**
+unless you pass `-var "create_bastion=true"`.
 
 ## What gets created
 
@@ -35,6 +40,7 @@ and most tenant policies whitelist it explicitly.
 cd examples/jump-host-access/C-azure-bastion
 terraform init
 terraform apply \
+  -var "create_bastion=true" \
   -var "subscription_id=$CLUSTER_SUBSCRIPTION_ID" \
   -var "location=$LOCATION" \
   -var "resource_group_name=$NETWORK_RESOURCE_GROUP" \

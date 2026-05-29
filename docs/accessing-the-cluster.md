@@ -31,7 +31,12 @@ Use this option only when you need an in-VNet browser for the internal console. 
 
 ### Azure Bastion
 
-Azure Bastion avoids a public IP on the jump VM and is often the cleanest enterprise option. The Standard SKU example in this repo is [`examples/jump-host-access/C-azure-bastion/`](../examples/jump-host-access/C-azure-bastion/). It shows how to deploy Bastion and tunnel SSH or TCP 6443 through a private jump VM.
+Azure Bastion avoids a public IP on the jump VM and can be a clean
+enterprise option, but it is **not deployed by `make all`**. The
+Standard SKU example in this repo is
+[`examples/jump-host-access/C-azure-bastion/`](../examples/jump-host-access/C-azure-bastion/).
+That example is opt-in and creates no Bastion resources unless you pass
+`create_bastion=true`.
 
 Azure Bastion Developer SKU can also be an option for portal-based RDP/SSH in supported scenarios without deploying a dedicated `AzureBastionSubnet` or Bastion public IP. Validate SKU availability, limits, and tenant policy before relying on it.
 

@@ -27,21 +27,37 @@ Default usage:
 make save-credentials
 ```
 
-With no arguments, the script writes to a timestamped directory:
+With no arguments, the script writes to a timestamped directory under
+the folder where you extracted or cloned this repo:
 
 ```text
 secrets/cluster-auth/<UTC timestamp>-<cluster-name>/
 ```
 
-`secrets/*` is ignored by git in this repository, so the default path is
-safe from accidental commits. If you choose a custom path inside the
-repository, the script refuses to continue unless that exact path is
-ignored by git.
+This works both from a Git clone and from a downloaded ZIP / copied
+folder:
+
+- **Git clone:** `secrets/*` is ignored by `.gitignore`, and the script
+  refuses in-repo destinations that are not ignored or that contain
+  tracked files.
+- **No Git / ZIP folder:** the same local path is used, but there is no
+  `.git` metadata to check. The bundle is still written locally and
+  `inventory.txt` records that Git checks were skipped.
+
+In both cases, treat `secrets/cluster-auth/...` as a private secret
+folder. Do not upload it back to GitHub, SharePoint, email, or a ticket.
 
 Use a specific destination when you want a stable run folder:
 
 ```bash
 make save-credentials CREDENTIALS_DIR=secrets/cluster-auth/lab-20260529
+```
+
+For customer-controlled secret storage, prefer an absolute path outside
+the repo:
+
+```bash
+make save-credentials CREDENTIALS_DIR=/secure/ocp-lab-credentials/lab-20260529
 ```
 
 `CREDENTIALS_DIR` is always the final output directory. Existing

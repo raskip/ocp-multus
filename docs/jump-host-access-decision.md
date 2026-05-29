@@ -48,7 +48,7 @@ example from `examples/jump-host-access/` into your repo fork.
 |---|---|---|---|---|---|
 | **A. Direct PIP** | yes | ~$3/mo per PIP | ❌ Frequently blocked by enterprise policy | low | `examples/jump-host-access/A-direct-pip/` |
 | **B. Hub-FW DNAT** | no (on the jump host itself; hub firewall already has one) | – (uses existing firewall) | ✅ usually accepted because security team controls the rules | medium — needs DNAT rule + UDR | `examples/jump-host-access/B-fw-dnat-azfw/` (Azure Firewall only) |
-| **C. Azure Bastion** | no | ~$140/mo (Standard SKU) plus AzureBastionSubnet /26 | ✅✅ designed for this | low | `examples/jump-host-access/C-azure-bastion/` |
+| **C. Azure Bastion** | no | ~$140/mo (Standard SKU) plus AzureBastionSubnet /26 | ✅✅ designed for this | low | `examples/jump-host-access/C-azure-bastion/` (explicit opt-in) |
 | **D. Private-only** | no | – | ✅✅ production realistic | depends entirely on existing WAN | `examples/jump-host-access/D-private-only/` |
 
 ## How to choose
@@ -73,11 +73,15 @@ example from `examples/jump-host-access/` into your repo fork.
    Firewall only. For other vendors translate the rule into your
    vendor's syntax.
 
-4. **If none of the above apply, use C.** Azure Bastion deploys into
+4. **If none of the above apply, consider C.** Azure Bastion deploys into
    the spoke VNet directly, requires no public IP on the jump VM, and
    integrates with `az network bastion tunnel` for SSH and
    `kubectl/oc` reachability. The price (~$140/mo Standard SKU) is
-   usually a fair trade-off for the simplicity.
+   often a fair trade-off for the simplicity.
+
+The main install path does **not** deploy Bastion. Pattern C is a
+separate opt-in example; its Terraform creates no Bastion resources
+unless `create_bastion=true` is set.
 
 ## What "use this pattern" actually means
 

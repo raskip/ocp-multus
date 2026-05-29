@@ -10,6 +10,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 OUT_DIR=""
 FORCE=0
+GIT_GUARD_NOTE=""
 
 usage() {
   cat <<'EOF'
@@ -113,6 +114,10 @@ is_inside_repo() {
   esac
 }
 
+repo_has_git_worktree() {
+  git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
 ensure_destination_is_safe() {
   local dest="$1"
 
@@ -125,6 +130,20 @@ ensure_destination_is_safe() {
   (( ${#entries[@]} > 0 )) && has_entries=1
 
   if ! is_inside_repo "$dest"; then
+    if (( has_entries == 1 && FORCE == 0 )); then
+      err "destination is not empty: $dest"
+      err "choose a new --out directory or pass --force intentionally"
+      exit 1
+    fi
+    if (( has_entries == 1 && FORCE == 1 )); then
+      rm -rf "$dest"/*
+      rm -rf "$dest"/.[!.]* "$dest"/..?* 2>/dev/null || true
+    fi
+    return 0
+  fi
+
+  if ! repo_has_git_worktree; then
+    GIT_GUARD_NOTE="No Git worktree detected under $REPO_ROOT; in-repository gitignore checks were skipped. Keep this local bundle private and do not upload it back into source control."
     if (( has_entries == 1 && FORCE == 0 )); then
       err "destination is not empty: $dest"
       err "choose a new --out directory or pass --force intentionally"
@@ -348,6 +367,7 @@ fi
 DEST="$(abs_path "$OUT_DIR")"
 ensure_destination_is_safe "$DEST"
 chmod 700 "$DEST" 2>/dev/null || true
+[[ -n "$GIT_GUARD_NOTE" ]] && record_note "$GIT_GUARD_NOTE"
 
 log "saving credential bundle to: $DEST"
 
