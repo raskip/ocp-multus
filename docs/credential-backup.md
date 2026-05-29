@@ -79,9 +79,9 @@ login and does not query Azure. It copies artefacts that exist on disk:
 - `config/cluster.env`
 - `secrets/pull-secret.txt`
 - `secrets/id_ed25519` and `secrets/id_ed25519.pub`
-- `~/.azure/osServicePrincipal.json`, or
+- `$AZURE_SP_JSON` when explicitly provided; otherwise
   `$AZURE_CONFIG_DIR/osServicePrincipal.json` when `AZURE_CONFIG_DIR` is
-  set, or `$AZURE_SP_JSON` when explicitly provided
+  set; otherwise `~/.azure/osServicePrincipal.json`
 - `install-config/install-config.yaml`
 - the `install/` directory, including `install/auth/`
 - root-level OpenShift installer logs/state when present
@@ -90,6 +90,15 @@ login and does not query Azure. It copies artefacts that exist on disk:
 
 Because Terraform output JSON includes sensitive values in cleartext,
 the output files are intentionally part of the secret bundle.
+
+If you use separate Azure CLI profiles, set `AZURE_CONFIG_DIR` before
+running the save target so the bundle captures the intended Service
+Principal JSON and never falls back to a different default profile:
+
+```bash
+export AZURE_CONFIG_DIR="$HOME/.azure-my-ocp-lab"
+make save-credentials
+```
 
 ## Restore / handover use
 

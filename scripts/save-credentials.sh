@@ -213,9 +213,13 @@ copy_dir_if_present() {
 
 copy_first_sp_json() {
   local candidates=()
-  [[ -n "${AZURE_SP_JSON:-}" ]] && candidates+=("$AZURE_SP_JSON")
-  [[ -n "${AZURE_CONFIG_DIR:-}" ]] && candidates+=("$AZURE_CONFIG_DIR/osServicePrincipal.json")
-  candidates+=("$HOME/.azure/osServicePrincipal.json")
+  if [[ -n "${AZURE_SP_JSON:-}" ]]; then
+    candidates+=("$AZURE_SP_JSON")
+  elif [[ -n "${AZURE_CONFIG_DIR:-}" ]]; then
+    candidates+=("$AZURE_CONFIG_DIR/osServicePrincipal.json")
+  else
+    candidates+=("$HOME/.azure/osServicePrincipal.json")
+  fi
 
   local seen="" src
   for src in "${candidates[@]}"; do
