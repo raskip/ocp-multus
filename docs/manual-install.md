@@ -151,7 +151,8 @@ make destroy-bootstrap
 make workers
 ```
 
-Approve worker CSRs until nodes become ready:
+Approve worker CSRs until nodes become ready if you are doing everything
+manually. The `make wait-install` target runs this loop automatically.
 
 ```bash
 while true; do
@@ -162,10 +163,12 @@ while true; do
 done
 ```
 
-Wait for completion:
+Wait for completion. For the default topology, this target also switches
+the default IngressController to `HostNetwork` so it uses the
+repo-created internal apps LB instead of provisioning a second cloud LB:
 
 ```bash
-./openshift-install --dir=install wait-for install-complete --log-level=info
+make wait-install
 make save-credentials
 ```
 
@@ -184,16 +187,19 @@ never resolve.
 
 The fix is to patch the IngressController to `HostNetwork`, so it binds
 directly to ports 80/443 on the worker nodes that sit behind the
-pre-created LB. Run this **after** `wait-for install-complete` succeeds:
+pre-created LB. `make wait-install` runs this automatically for the default repo
+topology. If you are recovering a partially installed cluster or you
+disabled the automation with `AUTO_INGRESS_HOSTNETWORK=false`, run:
 
 ```bash
 make ingress-hostnetwork
 ```
 
-The target deletes the default IngressController and recreates it with
-`endpointPublishingStrategy: HostNetwork`. After ~1-2 minutes the
-ingress operator reports Available=True and `*.apps.<basedomain>`
-resolves through the pre-created LB.
+The target is idempotent. It deletes the default IngressController and
+recreates it with `endpointPublishingStrategy: HostNetwork` unless it is
+already HostNetwork. After ~1-2 minutes the ingress operator reports
+Available=True and `*.apps.<basedomain>` resolves through the
+pre-created LB.
 
 Verification:
 

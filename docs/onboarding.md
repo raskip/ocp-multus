@@ -120,7 +120,8 @@ but you should know what they do in case you need to re-run them:
   for the full walk-through when you want to run the demo (Phase 6).
 - **Ingress via HostNetwork** — When the cluster is internal-only,
   the default ingress requires a pre-created internal apps LB. The
-  install handles this; if you customise the topology, read
+  install handles this during `make wait-install`; if you customise the
+  topology, set `AUTO_INGRESS_HOSTNETWORK=false` and read
   `docs/scripts/` for the ingress-related helpers.
 
 ## Phase 4 — Day-2 operations
