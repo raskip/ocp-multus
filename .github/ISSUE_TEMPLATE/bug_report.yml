@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a problem with the install flow, scripts, or docs
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. **Do not include secrets or tenant identifiers**
+        (subscription/tenant IDs, internal IPs, resource-group names, kubeconfigs,
+        pull secrets). Redact them before posting.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you run and what went wrong?
+      placeholder: e.g. `make bootstrap` failed at ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands (with secrets redacted).
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Host OS/shell, OpenShift version, Terraform/az CLI versions, BYO vs repo-created network.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste redacted output. Use code fences.
+      render: shell

@@ -1,5 +1,8 @@
 # ocp-multus
 
+[![CI](https://github.com/raskip/ocp-multus/actions/workflows/ci.yml/badge.svg)](https://github.com/raskip/ocp-multus/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 Self-managed OpenShift Container Platform on Azure VMs using the Azure
 UPI flow, with optional **Multus secondary-network validation** (macvlan
 + host-device / SR-IOV-style).
@@ -166,3 +169,15 @@ Deep references:
   before ignition generation because Terraform creates the Azure VMs.
 - Generated files, pull secrets, Terraform state, kubeconfig, ignition
   files, and SAS-bearing auto tfvars are ignored by git.
+
+## Contributing & security
+
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — ground rules and the pre-push
+  checks (sanitize-check, shellcheck, `bash -n`, `terraform fmt`/`validate`).
+- [`SECURITY.md`](./SECURITY.md) — how to report a vulnerability and how
+  secrets are kept out of this repo.
+- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — Contributor Covenant.
+
+## License
+
+Licensed under the [MIT License](./LICENSE).

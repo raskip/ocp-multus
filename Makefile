@@ -22,10 +22,21 @@ export
         wait-bootstrap approve-csrs wait-install all all-yes _cost-prompt \
         etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
         workers-down workers-up cluster-status \
-        ingress-hostnetwork image-registry-removed
+        ingress-hostnetwork image-registry-removed install-hooks sanitize
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
+
+# Install the maintainer git hooks (pre-push sanitize guard).
+install-hooks:
+	@mkdir -p .git/hooks
+	@install -m 0755 scripts/hooks/pre-push .git/hooks/pre-push
+	@echo "Installed .git/hooks/pre-push"
+
+# Run the sanitize check on demand (auto-loads .sanitize-patterns.local).
+sanitize:
+	@bash scripts/sanitize-check.sh
+
 
 # Download matching openshift-install + oc for the current host (autodetected
 # with uname). Override via OCP_VERSION (default: stable-4.18). Independent of

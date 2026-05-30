@@ -5,52 +5,68 @@
 # tenants, customers, or personally identifiable information.
 #
 # This is the generic version intended for the public `raskip/ocp-multus`
-# repo. It scans for known leak patterns (test-lab resource names, internal
-# IPs, personal UPNs) so that copy-paste from a private lab into the public
-# repo is caught before push.
+# repo. It scans for two classes of leak:
+#
+#   1. BUILTIN structural patterns (below) — generic indicators that are not
+#      themselves secrets (private-key headers, embedded pull-secret `auths`
+#      blocks, tracked files under secrets/). These ship in the public repo.
+#
+#   2. LOCAL, environment-specific patterns — your own lab/tenant identifiers
+#      (domains, UPNs, subscription/tenant UUIDs, internal IPs, resource-group
+#      and storage-account names). These are PII/identifiers and must NEVER be
+#      committed. Keep them in a gitignored file and point the check at it:
+#
+#        cp .sanitize-patterns.example .sanitize-patterns.local
+#        # edit .sanitize-patterns.local with YOUR values (it is gitignored)
+#
+#      The check auto-loads `.sanitize-patterns.local` if present, or any file
+#      given via $SANITIZE_PATTERNS_FILE. This keeps your real identifiers out
+#      of the public repo while still guarding every local push.
 #
 # Exit 0  — no violations
 # Exit 1  — at least one violation; failing matches printed with file:line
 #
-# Usage: bash scripts/sanitize-check.sh
+# Usage:
+#   bash scripts/sanitize-check.sh
+#   SANITIZE_PATTERNS_FILE=/path/to/patterns bash scripts/sanitize-check.sh
 
 set -u
 
-# Patterns that must NOT appear anywhere in tracked content. Add new entries
-# here whenever a new customer/tenant snapshot is taken — the patterns
-# capture domain names, tenant/subscription UUIDs, internal IPs, SP names,
-# resource group prefixes, public IPs of jump/firewall hosts, and any
-# auto-generated identifiers that leak the originating tenant.
-PATTERNS=(
-  'REDACTED_DOMAIN'
-  'REDACTED_IDENTIFIER'
-  'REDACTED_IDENTIFIER'
-  'REDACTED_IDENTIFIER'
-  'REDACTED_EMAIL'
-  'REDACTED_UUID'
-  'REDACTED_UUID'
-  'REDACTED_UUID'
-  'REDACTED_IDENTIFIER'
-  'REDACTED_IDENTIFIER'
-  'REDACTED_IDENTIFIER'
-  'REDACTED_RESOURCE_GROUP'
-  'REDACTED_RESOURCE_GROUP'
-  'REDACTED_RESOURCE_GROUP'
-  'REDACTED_VNET'
-  'REDACTED_VNET'
-  'REDACTED_IP'
-  'REDACTED_IP'
-  'REDACTED_IP'
-  'REDACTED_STORAGE'
-  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
-  '"auths":[[:space:]]*\{'
+cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" || exit 1
+
+# Generic, non-secret structural patterns. These are safe to ship publicly:
+# they describe the *shape* of a leaked credential, not any specific value.
+BUILTIN_PATTERNS=(
+  '-----BEGIN [A-Z ]*PRIVATE KEY-----'   # SSH/TLS private keys
+  '"auths":[[:space:]]*\{'               # embedded Red Hat / registry pull secret
 )
 
+# Local, environment-specific patterns (gitignored). Add YOUR lab/tenant
+# identifiers here so copy-paste from a private lab is caught before push.
+PATTERNS_FILE="${SANITIZE_PATTERNS_FILE:-.sanitize-patterns.local}"
+
+LOCAL_PATTERNS=()
+if [[ -f "$PATTERNS_FILE" ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Skip blank lines and comments.
+    [[ -z "${line//[[:space:]]/}" ]] && continue
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    LOCAL_PATTERNS+=("$line")
+  done < "$PATTERNS_FILE"
+else
+  echo "[INFO] no local pattern file ($PATTERNS_FILE) — running BUILTIN checks only."
+  echo "[INFO] copy .sanitize-patterns.example to .sanitize-patterns.local to add"
+  echo "[INFO] your lab/tenant identifiers (domains, UPNs, UUIDs, IPs, RG names)."
+fi
+
+PATTERNS=( "${BUILTIN_PATTERNS[@]}" "${LOCAL_PATTERNS[@]}" )
+
 # Paths excluded from scanning. Local-only artifacts (kubeconfig, installer
-# output, terraform state, downloaded binaries) and the script itself
-# (which lists the patterns) are skipped.
+# output, terraform state, downloaded binaries) and the local pattern file
+# (which lists the identifiers) are skipped.
 EXCLUDES=(
   ":!scripts/sanitize-check.sh"
+  ":!.sanitize-patterns.local"
   ":!secrets/"
   ":!install/"
   ":!terraform/**/.terraform/"
@@ -61,8 +77,6 @@ EXCLUDES=(
   ":!lifecycle-*.log"
 )
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-
 violations=0
 total_hits=0
 
@@ -71,6 +85,7 @@ for p in "${PATTERNS[@]}"; do
     hits=$(git grep -nE -I --color=never "$p" -- "${EXCLUDES[@]}" 2>/dev/null || true)
   else
     hits=$(grep -rnIE --exclude-dir=.git --exclude-dir=secrets --exclude-dir=install \
+                     --exclude='.sanitize-patterns.local' \
                      --exclude='*.kubeconfig' --exclude='oc' --exclude='openshift-install' \
                      --exclude='lifecycle-*.log' "$p" . 2>/dev/null || true)
   fi

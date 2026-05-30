@@ -51,6 +51,8 @@ override.tf.json
 # Local
 .env
 config/cluster.env
+# Maintainer-only leak patterns for sanitize-check (contains lab identifiers)
+.sanitize-patterns.local
 *.swp
 *.bak
 
