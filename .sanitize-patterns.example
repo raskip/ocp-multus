@@ -1,0 +1,35 @@
+# .sanitize-patterns.example
+#
+# Template for the LOCAL, gitignored leak-pattern list used by
+# scripts/sanitize-check.sh. Copy this file to `.sanitize-patterns.local`
+# (which is gitignored) and replace the placeholders with YOUR real
+# lab/tenant identifiers. The values you put here are PII/identifiers and
+# must NEVER be committed — that is exactly why the live file is gitignored.
+#
+#   cp .sanitize-patterns.example .sanitize-patterns.local
+#   $EDITOR .sanitize-patterns.local
+#
+# Format: one POSIX extended-regular-expression per line. Blank lines and
+# lines starting with `#` are ignored. Escape regex metacharacters (`.`)
+# and use `\b` word boundaries where helpful to avoid false positives.
+#
+# Add an entry for every identifier that ties content back to your tenant:
+
+# --- DNS / domains ---
+# example\.com
+
+# --- People / UPNs / emails ---
+# \bjdoe\b
+# jdoe@example\.com
+
+# --- Subscription / tenant / app UUID fragments (use a distinctive slice) ---
+# 00000000-0000-0000-0000
+
+# --- Resource groups / VNets / storage accounts ---
+# rg-mylab\b
+# vnet-mylab
+# mystorageacct1234
+
+# --- Internal / public IPs (RFC1918 ranges + any public IPs of your hosts) ---
+# \b10\.0\.
+# \b203\.0\.113\.10\b

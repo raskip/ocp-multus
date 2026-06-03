@@ -1,0 +1,97 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Shell lint + sanitize
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: bash -n (syntax) on all shell scripts
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r -d '' f; do
+            if ! bash -n "$f"; then
+              echo "::error file=$f::bash -n failed"
+              fail=1
+            fi
+          done < <(find . -type f \( -name '*.sh' -o -path './scripts/hooks/pre-push' \) -not -path './.git/*' -print0)
+          exit $fail
+
+      - name: shellcheck
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find . -type f \( -name '*.sh' -o -path './scripts/hooks/pre-push' \) -not -path './.git/*' -print0)
+          if [ ${#files[@]} -gt 0 ]; then
+            shellcheck -S warning "${files[@]}"
+          fi
+
+      - name: sanitize-check (generic guard)
+        run: bash scripts/sanitize-check.sh
+
+  terraform:
+    name: Terraform fmt + validate
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values so the azurerm v4 provider can initialize/validate
+      # without any real Azure login. validate never contacts Azure.
+      ARM_SKIP_PROVIDER_REGISTRATION: "true"
+      ARM_SUBSCRIPTION_ID: "00000000-0000-0000-0000-000000000000"
+      ARM_TENANT_ID: "00000000-0000-0000-0000-000000000000"
+      ARM_CLIENT_ID: "00000000-0000-0000-0000-000000000000"
+      ARM_CLIENT_SECRET: "dummy"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive terraform
+
+      - name: terraform validate (each stack)
+        run: |
+          set -euo pipefail
+          rc=0
+          for dir in terraform/*/; do
+            [ -f "$dir/versions.tf" ] || [ -f "$dir/main.tf" ] || continue
+            echo "==> $dir"
+            ( cd "$dir" \
+              && terraform init -backend=false -input=false -no-color \
+              && terraform validate -no-color ) || rc=1
+          done
+          exit $rc
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          VERSION="8.30.1"
+          curl -sSfL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          sudo install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: gitleaks detect (working tree)
+        run: gitleaks detect --no-git --redact --verbose --source .

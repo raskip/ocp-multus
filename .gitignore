@@ -1,0 +1,64 @@
+# Large binaries (downloaded separately, e.g. via `make tools`)
+openshift-install
+oc
+kubectl
+openshift-install-linux.tar.gz
+openshift-install-linux-arm64.tar.gz
+openshift-install-mac.tar.gz
+openshift-install-mac-arm64.tar.gz
+openshift-client-linux.tar.gz
+openshift-client-linux-arm64.tar.gz
+openshift-client-mac.tar.gz
+openshift-client-mac-arm64.tar.gz
+
+# Secrets
+secrets/*
+!secrets/.gitkeep
+*.pem
+*.key
+kubeconfig
+kubeadmin-password
+
+# Rendered install-config (contains pull secret + ssh key)
+install-config/install-config.yaml
+
+# Installer-generated output
+install/
+auth/
+*.ign
+*.ignition
+metadata.json
+.openshift_install.log
+.openshift_install_state.json
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.auto.tfvars.json
+*.auto.tfvars
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local
+.env
+config/cluster.env
+# Maintainer-only leak patterns for sanitize-check (contains lab identifiers)
+.sanitize-patterns.local
+*.swp
+*.bak
+
+# Cluster lifecycle backups (etcd snapshots, recovery bundles)
+backups/*
+!backups/
+!backups/.gitkeep
+
+files/

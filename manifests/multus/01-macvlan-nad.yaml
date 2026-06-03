@@ -1,0 +1,22 @@
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-multus
+  namespace: multus-demo
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "macvlan-multus",
+      "type": "macvlan",
+      "master": "eth1",
+      "mode": "bridge",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "10.20.2.128/25",
+        "range_start": "10.20.2.130",
+        "range_end": "10.20.2.250",
+        "gateway": "10.20.2.1"
+      }
+    }

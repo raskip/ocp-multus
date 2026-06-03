@@ -1,0 +1,147 @@
+# Example GitHub Actions workflow for scheduled cluster shutdown/startup.
+#
+# This file ships as "*.example.yml.disabled" so GitHub Actions does NOT pick
+# it up automatically. To use it:
+#
+#   1. Rename the file to .github/workflows/cluster-lifecycle.yml
+#   2. Configure these repository secrets (Settings → Secrets → Actions):
+#        AZURE_CLIENT_ID         - Federated workload identity client id
+#        AZURE_TENANT_ID         - Entra tenant id
+#        AZURE_SUBSCRIPTION_ID   - Subscription containing the cluster VMs
+#        KUBECONFIG_B64          - base64 of a kubeconfig with cluster-admin access
+#   3. Configure these repository variables (Settings → Variables → Actions):
+#        CLUSTER_NAME            - the cluster name used in VM names (required)
+#        WORKLOAD_RESOURCE_GROUP - resource group with the cluster VMs (required)
+#        CONTROL_PLANE_VM_PREFIX - optional, defaults to vm-master
+#        WORKER_VM_PREFIX        - optional, defaults to vm-worker
+#        SRIOV_WORKER_VM_NAME    - optional, defaults to vm-worker-sriov
+#   4. Configure an Entra app + federated credentials so this repo can use OIDC:
+#        https://learn.microsoft.com/azure/developer/github/connect-from-azure
+#   5. Optionally uncomment the `schedule:` block at the bottom for cron-driven
+#      shutdown/startup. Cron is in UTC.
+#
+# The workflow only invokes scripts that already exist in this repo, so any
+# behavior change comes from editing the scripts, not the workflow.
+
+name: cluster-lifecycle
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Which lifecycle action to run"
+        required: true
+        default: "cluster-status"
+        type: choice
+        options:
+          - cluster-status
+          - cluster-shutdown
+          - cluster-shutdown-fast
+          - cluster-startup
+          - workers-down
+          - workers-up
+          - etcd-backup
+      timeout_min:
+        description: "Override OPERATIONS_TIMEOUT_MIN"
+        required: false
+        default: "30"
+
+permissions:
+  id-token: write   # for OIDC azure/login
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      OPERATIONS_TIMEOUT_MIN: ${{ inputs.timeout_min }}
+      ASSUME_YES: "1"  # never prompt in CI
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install oc, jq
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSLO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xzf openshift-client-linux.tar.gz oc kubectl
+          sudo mv oc kubectl /usr/local/bin/
+          rm -f openshift-client-linux.tar.gz README.md 2>/dev/null || true
+          oc version --client
+          jq --version
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Stage kubeconfig and cluster.env
+        shell: bash
+        env:
+          # These come from repository variables (Settings → Variables → Actions).
+          # Without them, the lifecycle scripts will refuse to act on the wrong
+          # resource group or with a mismatched cluster name.
+          CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+          WORKLOAD_RESOURCE_GROUP: ${{ vars.WORKLOAD_RESOURCE_GROUP }}
+          CONTROL_PLANE_VM_PREFIX: ${{ vars.CONTROL_PLANE_VM_PREFIX }}
+          WORKER_VM_PREFIX: ${{ vars.WORKER_VM_PREFIX }}
+          SRIOV_WORKER_VM_NAME: ${{ vars.SRIOV_WORKER_VM_NAME }}
+        run: |
+          set -euo pipefail
+          : "${CLUSTER_NAME:?repo variable CLUSTER_NAME is required}"
+          : "${WORKLOAD_RESOURCE_GROUP:?repo variable WORKLOAD_RESOURCE_GROUP is required}"
+          mkdir -p "$HOME/.kube"
+          printf '%s' "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          # Build a minimal cluster.env from repo variables / secrets so the
+          # lifecycle scripts target the right cluster, not the example one.
+          {
+            echo "CLUSTER_NAME=${CLUSTER_NAME}"
+            echo "WORKLOAD_RESOURCE_GROUP=${WORKLOAD_RESOURCE_GROUP}"
+            echo "CLUSTER_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            [[ -n "${CONTROL_PLANE_VM_PREFIX}" ]] && echo "CONTROL_PLANE_VM_PREFIX=${CONTROL_PLANE_VM_PREFIX}"
+            [[ -n "${WORKER_VM_PREFIX}"        ]] && echo "WORKER_VM_PREFIX=${WORKER_VM_PREFIX}"
+            [[ -n "${SRIOV_WORKER_VM_NAME}"    ]] && echo "SRIOV_WORKER_VM_NAME=${SRIOV_WORKER_VM_NAME}"
+            # Apply the workflow input AFTER everything else so it actually wins.
+            echo "OPERATIONS_TIMEOUT_MIN=${{ inputs.timeout_min }}"
+          } > config/cluster.env
+
+      - name: Run lifecycle action
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ inputs.mode }}" in
+            cluster-status)        make cluster-status ;;
+            etcd-backup)           make etcd-backup ;;
+            cluster-shutdown)      make cluster-shutdown ;;
+            cluster-shutdown-fast) make cluster-shutdown-fast ;;
+            cluster-startup)       make cluster-startup ;;
+            workers-down)          make workers-down ;;
+            workers-up)            make workers-up ;;
+            *) echo "unknown mode: ${{ inputs.mode }}"; exit 2 ;;
+          esac
+
+      - name: Upload etcd backup artifact (if any)
+        if: ${{ inputs.mode == 'etcd-backup' || inputs.mode == 'cluster-shutdown' || inputs.mode == 'cluster-shutdown-fast' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: etcd-backup-${{ github.run_id }}
+          path: backups/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+# To run on a schedule, uncomment one or both. Cron is in UTC.
+# 06:00 UTC weekdays = ~08:00 EET / 09:00 EEST mornings
+# 16:00 UTC weekdays = ~18:00 EET / 19:00 EEST evenings
+#
+#  schedule:
+#    - cron: "0 16 * * 1-5"   # graceful shutdown weekday evenings
+#      # then set inputs.mode = cluster-shutdown by switching this trigger to
+#      # a separate job (workflow_dispatch inputs are not available to schedules)
+#    - cron: "0 6 * * 1-5"    # cluster startup weekday mornings
+#
+# For scheduled runs you typically split this workflow into two: one with a
+# single cron + hard-coded `make cluster-shutdown`, and another with the other
+# cron + `make cluster-startup`.

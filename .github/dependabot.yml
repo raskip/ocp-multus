@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: terraform
+    directories:
+      - /terraform/00-prereqs
+      - /terraform/01-network
+      - /terraform/02-image
+      - /terraform/03-bootstrap
+      - /terraform/04-control-plane
+      - /terraform/05-workers
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps

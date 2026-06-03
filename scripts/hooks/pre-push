@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# scripts/hooks/pre-push
+#
+# Maintainer guard: run the sanitize check before every push so lab/tenant
+# identifiers (PII) never leave the workstation. Install it with:
+#
+#   make install-hooks
+#
+# It auto-loads .sanitize-patterns.local (gitignored) if present, so your
+# real identifiers stay local while still being enforced on every push.
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+if ! bash "$repo_root/scripts/sanitize-check.sh"; then
+  echo "pre-push: sanitize-check failed — push aborted." >&2
+  echo "Fix the reported matches or update .sanitize-patterns.local." >&2
+  exit 1
+fi
