@@ -19,7 +19,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/common.sh
 source "$REPO_ROOT/scripts/lib/common.sh"
 set +e # step errors are handled explicitly via run()
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 
 DRY_RUN="${DRY_RUN:-0}"
 CNF_YES="${CNF_YES:-0}"
