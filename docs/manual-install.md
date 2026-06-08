@@ -13,7 +13,7 @@ The Terraform stages are intentionally separate so you can inspect and troublesh
 - Azure CLI, Terraform ≥ 1.6, `jq`, `make`, `bash` ≥ 4, `openshift-install`, and `oc`. Run `make verify` first — it auto-checks the host-tool prerequisites and points to install hints if anything is missing. The cluster's CPU architecture is independent of the host that runs this installer — see [README → Where to run the installer](../README.md#where-to-run-the-installer) for supported host environments and [cpu-architecture.md → Host CPU vs cluster CPU](cpu-architecture.md#host-cpu-vs-cluster-cpu-they-are-independent) for the host-vs-cluster matrix. Use `make tools` to download matching `openshift-install` + `oc` binaries.
 - Red Hat pull secret.
 - SSH keypair for RHCOS and helper VMs.
-- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [cpu-architecture.md](cpu-architecture.md).
+- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. With `CNF_PROFILE=true` the workers use `Standard_D8s_v5` (4 NIC slots) instead. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [cpu-architecture.md](cpu-architecture.md).
 
 ## Open items — confirm with your platform team
 
@@ -242,6 +242,10 @@ workers).
 After install, you can validate Multus secondary networking with the
 macvlan demo and (if you provisioned the optional SR-IOV-style worker)
 the host-device demo.
+
+For a production telco CNF topology (per-LAN ipvlan NADs, SCTP, node tuning,
+dedicated worker NICs, RWX storage, in-cluster registry) see the optional
+[`cnf-telco-profile.md`](./cnf-telco-profile.md).
 
 See [`multus-validation.md`](./multus-validation.md) for the full
 walkthrough including PodSecurity, SCC, Whereabouts IPAM, and arm64

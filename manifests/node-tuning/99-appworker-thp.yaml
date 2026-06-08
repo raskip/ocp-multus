@@ -1,0 +1,14 @@
+# Transparent Huge Pages policy on the CNF (appworker) pool, via kernel arg.
+# TODO(Nokia): confirm the required value. Common telco choices:
+#   transparent_hugepage=madvise   (default here)
+#   transparent_hugepage=never
+# Applying this triggers a rolling reboot of the appworker pool only.
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: appworker
+  name: 99-appworker-thp
+spec:
+  kernelArguments:
+    - transparent_hugepage=madvise

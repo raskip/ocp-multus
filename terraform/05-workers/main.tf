@@ -3,6 +3,9 @@ locals {
   subnet_worker_id        = data.terraform_remote_state.network.outputs.subnet_worker_id
   subnet_multus_id        = data.terraform_remote_state.network.outputs.subnet_multus_id
   subnet_sriov_id         = data.terraform_remote_state.network.outputs.subnet_sriov_id
+  subnet_oam_id           = data.terraform_remote_state.network.outputs.subnet_oam_id
+  subnet_ausfudm_id       = data.terraform_remote_state.network.outputs.subnet_ausfudm_id
+  subnet_hsshlr_id        = data.terraform_remote_state.network.outputs.subnet_hsshlr_id
   ingress_backend_pool_id = data.terraform_remote_state.network.outputs.ingress_internal_backend_pool_id
   image_id                = data.terraform_remote_state.image.outputs.image_id
 
@@ -15,12 +18,13 @@ locals {
 
 # Primary NIC: worker subnet, attached to ingress LB backend
 resource "azurerm_network_interface" "worker_primary" {
-  count                 = var.replicas
-  name                  = "nic-worker-${count.index}-primary-${var.cluster_name}"
-  location              = var.location
-  resource_group_name   = local.workload_rg
-  ip_forwarding_enabled = true
-  tags                  = var.tags
+  count                          = var.replicas
+  name                           = "nic-worker-${count.index}-primary-${var.cluster_name}"
+  location                       = var.location
+  resource_group_name            = local.workload_rg
+  ip_forwarding_enabled          = true
+  accelerated_networking_enabled = var.enable_cnf_lans
+  tags                           = var.tags
 
   ip_configuration {
     name                          = "primary"
@@ -39,8 +43,10 @@ resource "azurerm_network_interface_backend_address_pool_association" "worker_in
 
 # Secondary NIC: Multus subnet. No LB, IP forwarding on so macvlan-ed pods can
 # send packets with their own IPs/MACs out through this NIC.
+# In CNF mode (enable_cnf_lans=true) this demo NIC is dropped in favour of the
+# three dedicated CNF LAN NICs below, keeping the worker at 4 NICs (D8s_v5).
 resource "azurerm_network_interface" "worker_multus" {
-  count                 = var.replicas
+  count                 = var.enable_cnf_lans ? 0 : var.replicas
   name                  = "nic-worker-${count.index}-multus-${var.cluster_name}"
   location              = var.location
   resource_group_name   = local.workload_rg
@@ -55,6 +61,63 @@ resource "azurerm_network_interface" "worker_multus" {
   }
 }
 
+#-----------------------------------------------------------------------------
+# CNF LAN NICs (one per worker per LAN: OAM + AUSF-UDM + HSS-HLR). Created only
+# in CNF mode. Accelerated Networking ON for the 400 MB/s TCP/UDP target (AN
+# does not accelerate SCTP — see docs/cnf-telco-profile.md). IP forwarding ON so
+# ipvlan/macvlan-ed pods can send with their own IPs out through the NIC.
+#-----------------------------------------------------------------------------
+resource "azurerm_network_interface" "worker_oam" {
+  count                          = var.enable_cnf_lans ? var.replicas : 0
+  name                           = "nic-worker-${count.index}-oam-${var.cluster_name}"
+  location                       = var.location
+  resource_group_name            = local.workload_rg
+  ip_forwarding_enabled          = true
+  accelerated_networking_enabled = true
+  tags                           = var.tags
+
+  ip_configuration {
+    name                          = "oam"
+    subnet_id                     = local.subnet_oam_id
+    private_ip_address_allocation = "Dynamic"
+    primary                       = true
+  }
+}
+
+resource "azurerm_network_interface" "worker_ausfudm" {
+  count                          = var.enable_cnf_lans ? var.replicas : 0
+  name                           = "nic-worker-${count.index}-ausfudm-${var.cluster_name}"
+  location                       = var.location
+  resource_group_name            = local.workload_rg
+  ip_forwarding_enabled          = true
+  accelerated_networking_enabled = true
+  tags                           = var.tags
+
+  ip_configuration {
+    name                          = "ausfudm"
+    subnet_id                     = local.subnet_ausfudm_id
+    private_ip_address_allocation = "Dynamic"
+    primary                       = true
+  }
+}
+
+resource "azurerm_network_interface" "worker_hsshlr" {
+  count                          = var.enable_cnf_lans ? var.replicas : 0
+  name                           = "nic-worker-${count.index}-hsshlr-${var.cluster_name}"
+  location                       = var.location
+  resource_group_name            = local.workload_rg
+  ip_forwarding_enabled          = true
+  accelerated_networking_enabled = true
+  tags                           = var.tags
+
+  ip_configuration {
+    name                          = "hsshlr"
+    subnet_id                     = local.subnet_hsshlr_id
+    private_ip_address_allocation = "Dynamic"
+    primary                       = true
+  }
+}
+
 resource "azurerm_linux_virtual_machine" "worker" {
   count               = var.replicas
   name                = "vm-worker-${count.index}-${var.cluster_name}"
@@ -63,10 +126,16 @@ resource "azurerm_linux_virtual_machine" "worker" {
   size                = var.vm_size
   zone                = element(local.zones, count.index)
   admin_username      = "core"
-  network_interface_ids = [
-    azurerm_network_interface.worker_primary[count.index].id,
-    azurerm_network_interface.worker_multus[count.index].id,
-  ]
+  network_interface_ids = concat(
+    [azurerm_network_interface.worker_primary[count.index].id],
+    var.enable_cnf_lans ? [
+      azurerm_network_interface.worker_oam[count.index].id,
+      azurerm_network_interface.worker_ausfudm[count.index].id,
+      azurerm_network_interface.worker_hsshlr[count.index].id,
+      ] : [
+      azurerm_network_interface.worker_multus[count.index].id,
+    ],
+  )
   source_image_id                 = local.image_id
   disable_password_authentication = true
   custom_data                     = base64encode(local.worker_ignition)

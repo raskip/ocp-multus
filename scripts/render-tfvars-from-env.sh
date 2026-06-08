@@ -66,6 +66,13 @@ require ARCHITECTURE
 : "${SUBNET_MULTUS_CIDR:=10.20.2.0/24}"
 : "${SUBNET_SRIOV_CIDR:=10.20.3.0/24}"
 
+# Optional CNF profile (default OFF). CNF_PROFILE toggles enable_cnf_lans in the
+# 01-network and 05-workers stacks; the 3 LAN CIDRs default to placeholders.
+: "${CNF_PROFILE:=false}"
+: "${SUBNET_OAM_CIDR:=10.20.4.0/28}"
+: "${SUBNET_AUSFUDM_CIDR:=10.20.5.0/26}"
+: "${SUBNET_HSSHLR_CIDR:=10.20.6.0/26}"
+
 # Default to attaching the cluster route table to the master/bootstrap/multus
 # subnets in addition to worker (worker is always attached). This is the right
 # default for hub-spoke + firewall-egress topologies, which is the recommended
@@ -80,6 +87,7 @@ require ARCHITECTURE
 # if you have an existing pre-fix cluster you cannot migrate.
 : "${USE_LEGACY_DNS_LAYOUT:=false}"
 : "${CREATE_WINDOWS_JUMP:=false}"
+: "${CREATE_LINUX_BASTION:=false}"
 
 # Resolve infra_id (precedence: metadata.json > $INFRA_ID > ${CLUSTER_NAME}-poc).
 INFRA_ID_FROM_ENV="${INFRA_ID:-}"
@@ -162,11 +170,16 @@ private_dns_zone_name        = $(hcl_str "$BASE_DOMAIN")
 use_legacy_dns_layout        = $USE_LEGACY_DNS_LAYOUT
 admin_ssh_source_ip          = $(hcl_str "$ADMIN_SSH_SOURCE_IP")
 create_windows_jump          = $CREATE_WINDOWS_JUMP
+create_linux_bastion         = $CREATE_LINUX_BASTION
 subnet_master_cidr           = $(hcl_str "$SUBNET_MASTER_CIDR")
 subnet_worker_cidr           = $(hcl_str "$SUBNET_WORKER_CIDR")
 subnet_bootstrap_cidr        = $(hcl_str "$SUBNET_BOOTSTRAP_CIDR")
 subnet_multus_cidr           = $(hcl_str "$SUBNET_MULTUS_CIDR")
 subnet_sriov_cidr            = $(hcl_str "$SUBNET_SRIOV_CIDR")
+enable_cnf_lans              = $CNF_PROFILE
+subnet_oam_cidr              = $(hcl_str "$SUBNET_OAM_CIDR")
+subnet_ausfudm_cidr          = $(hcl_str "$SUBNET_AUSFUDM_CIDR")
+subnet_hsshlr_cidr           = $(hcl_str "$SUBNET_HSSHLR_CIDR")
 attach_route_table_to_extra_subnets = $(hcl_string_list "$ATTACH_RT_EXTRA_SUBNETS")
 EOF
 )"
@@ -192,6 +205,10 @@ for STACK in 03-bootstrap 04-control-plane 05-workers; do
   printf '%s\n' "ssh_public_key_path = \"../../${SSH_PUB_REL}\"" \
     >> "$REPO_ROOT/terraform/$STACK/from-env.auto.tfvars"
 done
+
+# CNF profile toggle for the workers stack (must match 01-network/enable_cnf_lans).
+printf '%s\n' "enable_cnf_lans = $CNF_PROFILE" \
+  >> "$REPO_ROOT/terraform/05-workers/from-env.auto.tfvars"
 
 if [[ -n "${META_INFRA:-}" ]]; then
   echo "infra_id resolved from install/metadata.json: $INFRA_ID"

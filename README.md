@@ -64,6 +64,7 @@ Windows jump-host credentials into a gitignored bundle. See
 - RHCOS image import from the OpenShift installer release stream.
 - Bootstrap, control-plane, and worker VMs.
 - Optional Multus macvlan and host-device validation manifests.
+- Optional **CNF / telco profile** (`CNF_PROFILE=true`, default OFF): three telco LAN subnets, per-LAN worker NICs with Accelerated Networking, Multus ipvlan NADs, SCTP/THP/sysctl node tuning, RWO/RWX storage classes, an in-cluster registry, and an optional Linux bastion. See [`docs/cnf-telco-profile.md`](./docs/cnf-telco-profile.md).
 
 The default topology is internal: `publish: Internal`. A Windows
 browser/RDP jump host is available as an opt-in convenience
@@ -89,13 +90,17 @@ for endpoint, DNS, and access-path details.
 | `install-config/install-config.yaml.tmpl` | OpenShift install-config template. |
 | `scripts/` | Helper scripts (render config, resolve RHCOS, uploads, bootstrap wait, sanitize, …). |
 | `terraform/00-prereqs` | DNS, resource group, storage, and private DNS prerequisites. |
-| `terraform/01-network` | Subnets, NSGs, load balancers, private endpoint, uploader VM, and optional Windows jump VM. |
+| `terraform/01-network` | Subnets, NSGs, load balancers, private endpoint, uploader VM, optional Windows jump VM, and optional Linux bastion + CNF LAN subnets (CNF profile). |
 | `terraform/02-image` | RHCOS Azure image and Shared Image Gallery version. |
 | `terraform/03-bootstrap` | Bootstrap VM. |
 | `terraform/04-control-plane` | Control-plane VMs. |
 | `terraform/05-workers` | Worker VMs and optional SR-IOV-style worker. |
 | `manifests/multus` | Optional Multus macvlan validation manifests. |
 | `manifests/sriov` | Optional host-device / SR-IOV-style validation manifests. |
+| `manifests/cnf` | Optional CNF profile: Multus ipvlan NADs per telco LAN (see [`docs/cnf-telco-profile.md`](./docs/cnf-telco-profile.md)). |
+| `manifests/cnf-platform` | Optional CNF profile: `appworker` pool, scoped SCC, ServiceAccount, PriorityClass. |
+| `manifests/node-tuning` | Optional CNF profile: SCTP/THP/sysctl MachineConfigs scoped to the CNF pool. |
+| `manifests/storage` | Optional CNF profile: RWO (Azure Disk) + RWX (Azure Files) StorageClasses. |
 | `docs/` | All written documentation (onboarding, references, runbooks). |
 | `examples/network-prereqs-azcli/` | Copy-pasteable `az`/`pwsh` scripts for BYO-network creation. |
 | `examples/jump-host-access/` | Four reference patterns (direct PIP, FW DNAT, Azure Bastion, private-only). |

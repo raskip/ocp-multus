@@ -1,0 +1,12 @@
+# Scheduling priority for CNF signalling workloads so they are scheduled ahead
+# of and can preempt best-effort pods under contention.
+# TODO(Nokia): confirm the value and preemption policy. If the CNFs ship their
+# own PriorityClasses, use those instead.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: cnf-high
+value: 1000000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "High priority for CNF signalling workloads (TODO(Nokia): confirm value/preemption)."

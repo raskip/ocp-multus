@@ -83,6 +83,11 @@ The main install path does **not** deploy Bastion. Pattern C is a
 separate opt-in example; its Terraform creates no Bastion resources
 unless `create_bastion=true` is set.
 
+> Separate from the above: the optional CNF profile can create an **in-VNet
+> Linux bastion** (`CREATE_LINUX_BASTION=true`) for *operating* CNF workloads and
+> reaching internal load balancers from inside the VNet — it is not a
+> workstation→API jump host. See [`cnf-telco-profile.md`](./cnf-telco-profile.md).
+
 ## What "use this pattern" actually means
 
 Patterns A, B, and C all require **a jump VM inside the spoke VNet**

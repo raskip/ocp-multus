@@ -99,6 +99,10 @@ OpenShift on Azure](https://docs.redhat.com/en/documentation/openshift_container
 - **SR-IOV-style worker (`Standard_D8s_v5`)** — same SKU as the master:
   4+ NIC slots and Accelerated Networking on Intel are required for the
   optional Multus / SR-IOV demos.
+- **CNF profile worker (`Standard_D8s_v5`)** — with `CNF_PROFILE=true` the
+  general worker pool also moves to a 4-NIC SKU to carry the primary plus three
+  CNF LAN NICs (OAM/AUSF-UDM/HSS-HLR) with Accelerated Networking. See
+  [`cnf-telco-profile.md`](./cnf-telco-profile.md).
 - **Uploader (`Standard_D2s_v5`)** — small jumpbox used once during
   install to stream the RHCOS VHD into the private storage account.
 

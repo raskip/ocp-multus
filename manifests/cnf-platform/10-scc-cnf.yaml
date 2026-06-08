@@ -1,0 +1,40 @@
+# Scoped SecurityContextConstraints for the CNF workloads.
+# Grants only what ipvlan + SCTP need (NET_ADMIN, NET_RAW) instead of the blanket
+# `privileged` SCC. Bound to the cnf-sa ServiceAccount only.
+# TODO(Nokia): confirm the real capability/host-access requirements — some CNFs
+# need hostNetwork or additional capabilities; widen deliberately, not by default.
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: cnf-scc
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: true
+allowHostNetwork: false
+allowHostPID: false
+allowHostIPC: false
+allowHostPorts: false
+allowHostDirVolumePlugin: false
+readOnlyRootFilesystem: false
+defaultAddCapabilities: []
+requiredDropCapabilities:
+  - ALL
+allowedCapabilities:
+  - NET_ADMIN
+  - NET_RAW
+runAsUser:
+  type: MustRunAsRange
+seLinuxContext:
+  type: MustRunAs
+fsGroup:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
+users:
+  - system:serviceaccount:cnf:cnf-sa

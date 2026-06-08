@@ -198,6 +198,20 @@ minutes, check the operator logs (`oc -n openshift-image-registry logs
 deploy/cluster-image-registry-operator`) for the specific Azure auth
 error.
 
+## CNF / telco profile note
+
+The optional CNF profile (see [`cnf-telco-profile.md`](./cnf-telco-profile.md))
+**requires** an in-cluster registry for internal ImageStreams, so it does **not**
+use Option A. Instead:
+
+1. Install with `AUTO_IMAGE_REGISTRY_REMOVED=false` (set in
+   `config/cluster.cnf.example.env`) so `wait-install` leaves the registry alone.
+2. Run `scripts/configure-image-registry-managed.sh` to apply Option B (or set
+   `ACCOUNT_NAME`/`CONTAINER_NAME` for the Option C pre-created account).
+
+If an external registry (Quay / ACR) is acceptable to the CNF vendor, that is
+simpler than running the in-cluster registry — confirm during the workshop.
+
 ## Related
 
 - [`azure-identity-options.md`](./azure-identity-options.md) —

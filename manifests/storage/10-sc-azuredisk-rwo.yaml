@@ -1,0 +1,15 @@
+# RWO block storage via the Azure Disk CSI driver.
+# No storage account is involved — the driver provisions a standalone Azure
+# managed disk in the workload resource group and Azure attaches it to the
+# worker VM as a data disk. Works out-of-the-box on this repo's default identity
+# model (CCO mint mode; the install SP has Contributor on the workload RG).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cnf-azuredisk-rwo
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: Premium_LRS
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true

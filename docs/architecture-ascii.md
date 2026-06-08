@@ -14,6 +14,9 @@ Existing Azure VNet
   +-- snet-ocp-bootstrap    bootstrap VM + uploader VM
   +-- snet-ocp-multus       worker secondary NICs for macvlan demo
   +-- snet-ocp-sriov        optional dedicated accelerated NIC
+  +-- snet-ocp-oam          optional CNF profile: OAM LAN NIC per worker
+  +-- snet-ocp-ausfudm      optional CNF profile: AUSF-UDM external LAN
+  +-- snet-ocp-hsshlr       optional CNF profile: HSS-HLR external LAN
 
 OpenShift resource group
   |
@@ -60,6 +63,11 @@ host-device demo pod
 Namespace `multus-demo` must have the
 `pod-security.kubernetes.io/enforce: privileged` label so the macvlan /
 host-device CNI plugins can attach to host NICs.
+
+With the optional CNF profile (`CNF_PROFILE=true`) each worker instead has four
+NICs — `eth0` primary, `eth1` OAM, `eth2` AUSF-UDM, `eth3` HSS-HLR (all
+Accelerated-Networking enabled; the macvlan demo NIC is dropped) — attached via
+ipvlan NADs. See [`cnf-telco-profile.md`](./cnf-telco-profile.md).
 
 ## Data-path contrast
 

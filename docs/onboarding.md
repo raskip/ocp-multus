@@ -50,6 +50,11 @@ sizing, NSG rules, UDR, and DNS requirements. The
 directory has copy-pasteable `az`/`pwsh` scripts that create the
 prerequisite network exactly the way Terraform expects.
 
+**Optional — CNF / telco profile.** For telco CNFs that need dedicated LAN NICs,
+SCTP, node tuning, and an in-cluster registry, set `CNF_PROFILE=true` and merge
+[`config/cluster.cnf.example.env`](../config/cluster.cnf.example.env). Additive
+and default-OFF. See [`cnf-telco-profile.md`](./cnf-telco-profile.md).
+
 Outcome of Phase 1: either Terraform owns the network, or your network
 team has handed you a VNet that satisfies the documented prereqs.
 

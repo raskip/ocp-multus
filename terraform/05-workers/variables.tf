@@ -17,6 +17,11 @@ variable "replicas" {
   type    = number
   default = 2
 }
+variable "enable_cnf_lans" {
+  description = "When true, give each worker a dedicated NIC on each CNF LAN (OAM/AUSF-UDM/HSS-HLR) with Accelerated Networking and drop the demo multus NIC. Must match enable_cnf_lans in 01-network. Requires a 4-NIC SKU such as Standard_D8s_v5. Default false."
+  type        = bool
+  default     = false
+}
 variable "sriov_worker_vm_size" {
   description = "VM size for the SR-IOV demo worker. D8s_v5 (x86_64) and D8ps_v5 (arm64) both have 4 NIC slots and support Accelerated Networking."
   type        = string

@@ -28,6 +28,7 @@ Runnable example scripts are in
 | 5 | Subnet `snet-ocp-bootstrap` | yes | NSG attached. Route table attached (egress). |
 | 6 | Subnet `snet-ocp-multus` | optional | Only needed if Multus secondary NICs are used. NSG attached. |
 | 7 | Subnet `snet-ocp-sriov` | optional | Only needed if SR-IOV / host-device CNI is used. NSG attached. |
+| 7a–c | Subnets `snet-ocp-oam`, `snet-ocp-ausfudm`, `snet-ocp-hsshlr` | optional | Only with the CNF profile (`CNF_PROFILE=true`): one dedicated worker NIC per telco LAN. NSG attached; route table only if the external LANs need firewall egress. See [`cnf-telco-profile.md`](./cnf-telco-profile.md). |
 | 8 | NSG for master subnet | yes | Section 3. |
 | 9 | NSG for worker subnet | yes | Section 3. |
 | 10 | Route table for egress (UDR) | yes (hub-spoke + FW egress) | Section 4. |
@@ -61,13 +62,18 @@ The cluster installer creates:
 | Subnet | Minimum | Recommended | Rationale |
 |---|---|---|---|
 | `snet-ocp-master` | /28 (16 IP) | **/27 (32 IP)** | 3 master VMs + ILB frontends + storage PE; count stays fixed at 3 masters |
-| `snet-ocp-bootstrap` | /29 (8 IP) | **/28 (16 IP)** | 1 bootstrap VM (transient) + uploader VM + optional Windows jump VM (`CREATE_WINDOWS_JUMP=true`) |
+| `snet-ocp-bootstrap` | /29 (8 IP) | **/28 (16 IP)** | 1 bootstrap VM (transient) + uploader VM + optional Windows jump VM (`CREATE_WINDOWS_JUMP=true`) + optional Linux bastion (`CREATE_LINUX_BASTION=true`) |
 | `snet-ocp-worker` | /28 (16 IP) | **/24 (256 IP)** | 2–N worker VMs + ingress ILB frontend; grows with workload |
 | `snet-ocp-multus` | /25 (128 IP) | **/24 (256 IP)** | Pod IPs for whereabouts IPAM on macvlan / bridge NADs |
 | `snet-ocp-sriov` | /28 (16 IP) | **/27 (32 IP)** | One VF IP per worker per host-device NIC + a few reserves |
+| `snet-ocp-oam` | /28 (16 IP) | **/28 (16 IP)** | CNF profile only: OAM LAN, one NIC per worker |
+| `snet-ocp-ausfudm` | /26 (64 IP) | **/26 (64 IP)** | CNF profile only: AUSF-UDM external LAN |
+| `snet-ocp-hsshlr` | /26 (64 IP) | **/26 (64 IP)** | CNF profile only: HSS-HLR external LAN |
 
-A `/22` VNet (1024 addresses) leaves room for all five subnets at the
-recommended sizes plus growth.
+A `/22` VNet (1024 addresses) leaves room for all five base subnets at the
+recommended sizes plus growth. The optional CNF profile adds three more LAN
+subnets — size the VNet accordingly (a `/21` is comfortable). See
+[`cnf-telco-profile.md`](./cnf-telco-profile.md).
 
 ---
 
@@ -146,7 +152,7 @@ Grant the install/runtime identity only these network permissions:
 
 | Scope | Minimum grant | Why |
 |---|---|---|
-| Each OCP subnet (`master`, `worker`, `bootstrap`, `multus`, `sriov`) | Custom role with `Microsoft.Network/virtualNetworks/subnets/read` and `Microsoft.Network/virtualNetworks/subnets/join/action` | Lets VM NICs, internal load balancer frontends, and the storage Private Endpoint attach to the existing subnets. |
+| Each OCP subnet (`master`, `worker`, `bootstrap`, `multus`, `sriov`; plus `oam`, `ausfudm`, `hsshlr` with the CNF profile) | Custom role with `Microsoft.Network/virtualNetworks/subnets/read` and `Microsoft.Network/virtualNetworks/subnets/join/action` | Lets VM NICs, internal load balancer frontends, and the storage Private Endpoint attach to the existing subnets. |
 | Cluster route table | Built-in **Network Contributor scoped to the route table only**, or a custom route-writer role | OpenShift's Azure cloud-provider creates/updates/deletes per-node routes. |
 | Workload resource group | **Contributor** | Terraform and the cluster runtime create VMs, NICs, disks, load balancers, public IPs if enabled, storage, and Private Endpoint resources there. |
 | Public / private DNS zones | DNS-scoped roles only | Public child-zone delegation and Private Endpoint DNS A-record creation. |
@@ -281,5 +287,9 @@ subnet_worker_id    = "/subscriptions/.../snet-ocp-worker"
 subnet_bootstrap_id = "/subscriptions/.../snet-ocp-bootstrap"
 subnet_multus_id    = "/subscriptions/.../snet-ocp-multus"
 subnet_sriov_id     = "/subscriptions/.../snet-ocp-sriov"
+# CNF profile only (enable_cnf_lans = true):
+# subnet_oam_id      = "/subscriptions/.../snet-ocp-oam"
+# subnet_ausfudm_id  = "/subscriptions/.../snet-ocp-ausfudm"
+# subnet_hsshlr_id   = "/subscriptions/.../snet-ocp-hsshlr"
 route_table_id      = "/subscriptions/.../routeTables/rt-ocp-egress"
 ```

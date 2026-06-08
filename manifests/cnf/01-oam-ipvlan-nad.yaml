@@ -1,0 +1,30 @@
+# OAM LAN ipvlan NAD.
+# TODO(Nokia): confirm the following before applying:
+#   - master: in-guest NIC for the OAM LAN. With enable_cnf_lans=true the worker
+#     NIC order is eth0=primary, eth1=oam, eth2=ausfudm, eth3=hsshlr (PCI order).
+#     Verify with: oc debug node/<w> -- chroot /host ip -br a   (arm64: enP*).
+#   - mode: l2 | l3 | l3s
+#   - ipam: whereabouts range/gateway (must sit inside SUBNET_OAM_CIDR and not
+#     overlap the Azure-assigned NIC IPs) OR static.
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: oam-ipvlan
+  namespace: cnf
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "oam-ipvlan",
+      "type": "ipvlan",
+      "master": "eth1",
+      "mode": "l2",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "10.20.4.0/28",
+        "range_start": "10.20.4.4",
+        "range_end": "10.20.4.14",
+        "gateway": "10.20.4.1"
+      }
+    }

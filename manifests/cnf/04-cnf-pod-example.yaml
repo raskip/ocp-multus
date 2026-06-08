@@ -1,0 +1,42 @@
+# Example multi-NIC CNF pod: attaches to all three CNF LANs via Multus.
+# The pod gets eth0 (primary pod network) plus three extra interfaces from the
+# NADs listed in the k8s.v1.cni.cncf.io/networks annotation.
+# TODO(Nokia): replace the placeholder image/command with the real CNF workload
+# and add the SCTP-using container ports once Phase D (sctp module) is applied.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnf-example
+  namespace: cnf
+  labels:
+    app: cnf-example
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cnf-example
+  template:
+    metadata:
+      labels:
+        app: cnf-example
+      annotations:
+        k8s.v1.cni.cncf.io/networks: oam-ipvlan,ausfudm-ipvlan,hsshlr-ipvlan
+    spec:
+      serviceAccountName: cnf-sa
+      nodeSelector:
+        node-role.kubernetes.io/appworker: ""
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: cnf-example
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: shell
+          image: registry.access.redhat.com/ubi9/ubi:latest
+          command: ["/bin/bash", "-c", "sleep infinity"]
+          securityContext:
+            capabilities:
+              add: ["NET_RAW", "NET_ADMIN"]

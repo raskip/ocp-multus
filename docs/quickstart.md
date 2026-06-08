@@ -18,6 +18,10 @@ install hints if anything is missing.
 > If not, start at
 > [`pre-install-checklist.md`](./pre-install-checklist.md).
 
+> Deploying telco CNFs? The optional **CNF profile** (dedicated LAN NICs,
+> ipvlan, SCTP, node tuning, in-cluster registry) is in
+> [`cnf-telco-profile.md`](./cnf-telco-profile.md).
+
 ## 1. Clone + tools
 
 ```bash

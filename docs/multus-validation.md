@@ -11,6 +11,11 @@ Both demos are **optional** — they validate that secondary pod networking
 is wired correctly end-to-end. Skip them if the cluster is for a workload
 that does not need additional pod NICs.
 
+> For a production telco CNF topology (ipvlan NADs per LAN, SCTP, node tuning,
+> dedicated per-LAN worker NICs, RWX storage), see the optional
+> [`cnf-telco-profile.md`](./cnf-telco-profile.md) — it builds on the same Multus
+> foundation as these demos.
+
 Run them after the cluster has finished installing (`make all` completed,
 `oc get nodes` shows all workers `Ready`).
 

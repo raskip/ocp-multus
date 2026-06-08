@@ -7,3 +7,12 @@ output "worker_primary_ips" {
 output "worker_multus_ips" {
   value = [for n in azurerm_network_interface.worker_multus : n.ip_configuration[0].private_ip_address]
 }
+output "worker_oam_ips" {
+  value = [for n in azurerm_network_interface.worker_oam : n.ip_configuration[0].private_ip_address]
+}
+output "worker_ausfudm_ips" {
+  value = [for n in azurerm_network_interface.worker_ausfudm : n.ip_configuration[0].private_ip_address]
+}
+output "worker_hsshlr_ips" {
+  value = [for n in azurerm_network_interface.worker_hsshlr : n.ip_configuration[0].private_ip_address]
+}

@@ -257,6 +257,74 @@ resource "azapi_resource" "subnet_sriov" {
 }
 
 #-----------------------------------------------------------------------------
+# Optional Nokia CNF / telco LAN subnets (created only when enable_cnf_lans =
+# true AND manage_network_resources = true). Same azapi pattern as the subnets
+# above: worker NSG inline + optional route-table attach. Default OFF.
+#-----------------------------------------------------------------------------
+resource "azapi_resource" "subnet_oam" {
+  count                     = var.manage_network_resources && var.enable_cnf_lans ? 1 : 0
+  type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
+  name                      = "snet-ocp-oam"
+  parent_id                 = local.vnet_id
+  schema_validation_enabled = false
+  body = {
+    properties = merge(
+      {
+        addressPrefix        = var.subnet_oam_cidr
+        networkSecurityGroup = { id = azurerm_network_security_group.worker[0].id }
+      },
+      contains(var.attach_route_table_to_extra_subnets, "oam") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
+  }
+  response_export_values = ["id"]
+  depends_on             = [azapi_resource.subnet_sriov]
+}
+
+resource "azapi_resource" "subnet_ausfudm" {
+  count                     = var.manage_network_resources && var.enable_cnf_lans ? 1 : 0
+  type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
+  name                      = "snet-ocp-ausfudm"
+  parent_id                 = local.vnet_id
+  schema_validation_enabled = false
+  body = {
+    properties = merge(
+      {
+        addressPrefix        = var.subnet_ausfudm_cidr
+        networkSecurityGroup = { id = azurerm_network_security_group.worker[0].id }
+      },
+      contains(var.attach_route_table_to_extra_subnets, "ausfudm") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
+  }
+  response_export_values = ["id"]
+  depends_on             = [azapi_resource.subnet_oam]
+}
+
+resource "azapi_resource" "subnet_hsshlr" {
+  count                     = var.manage_network_resources && var.enable_cnf_lans ? 1 : 0
+  type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
+  name                      = "snet-ocp-hsshlr"
+  parent_id                 = local.vnet_id
+  schema_validation_enabled = false
+  body = {
+    properties = merge(
+      {
+        addressPrefix        = var.subnet_hsshlr_cidr
+        networkSecurityGroup = { id = azurerm_network_security_group.worker[0].id }
+      },
+      contains(var.attach_route_table_to_extra_subnets, "hsshlr") ? {
+        routeTable = { id = azurerm_route_table.node[0].id }
+      } : {}
+    )
+  }
+  response_export_values = ["id"]
+  depends_on             = [azapi_resource.subnet_ausfudm]
+}
+
+#-----------------------------------------------------------------------------
 # Subnet IDs (and the route-table ID) used by every downstream resource in
 # this stack. In repo-managed mode they come from the azapi/azurerm
 # resources above; in BYO mode they come from the var.subnet_*_id inputs.
@@ -267,6 +335,9 @@ locals {
   subnet_bootstrap_id = var.manage_network_resources ? azapi_resource.subnet_bootstrap[0].id : var.subnet_bootstrap_id
   subnet_multus_id    = var.manage_network_resources ? azapi_resource.subnet_multus[0].id : var.subnet_multus_id
   subnet_sriov_id     = var.manage_network_resources ? azapi_resource.subnet_sriov[0].id : var.subnet_sriov_id
+  subnet_oam_id       = var.manage_network_resources ? one(azapi_resource.subnet_oam[*].id) : var.subnet_oam_id
+  subnet_ausfudm_id   = var.manage_network_resources ? one(azapi_resource.subnet_ausfudm[*].id) : var.subnet_ausfudm_id
+  subnet_hsshlr_id    = var.manage_network_resources ? one(azapi_resource.subnet_hsshlr[*].id) : var.subnet_hsshlr_id
   route_table_id      = var.manage_network_resources ? azurerm_route_table.node[0].id : var.route_table_id
 }
 
@@ -558,6 +629,79 @@ resource "azurerm_role_assignment" "uploader_blob_contributor" {
   scope                = local.storage_account_id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_linux_virtual_machine.uploader.identity[0].principal_id
+}
+
+#-----------------------------------------------------------------------------
+# Optional Linux bastion: persistent in-VNet tooling host (Helm / Python / oc /
+# az) for operating CNF workloads and reaching internal load balancers (e.g. the
+# ZTS Envoy LB on TCP 8175/8099). No public IP — SSH in from admin_ssh_source_ip
+# (allowed by the master NSG on the bootstrap subnet) or via a jump host.
+# Default OFF (create_linux_bastion = false).
+#-----------------------------------------------------------------------------
+resource "azurerm_network_interface" "cnf_bastion" {
+  count               = var.create_linux_bastion ? 1 : 0
+  name                = "nic-cnf-bastion-${var.cluster_name}"
+  location            = var.location
+  resource_group_name = data.azurerm_resource_group.workload.name
+  tags                = var.tags
+
+  ip_configuration {
+    name                          = "ipconfig1"
+    subnet_id                     = local.subnet_bootstrap_id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "cnf_bastion" {
+  count                           = var.create_linux_bastion ? 1 : 0
+  name                            = "vm-cnf-bastion-${var.cluster_name}"
+  location                        = var.location
+  resource_group_name             = data.azurerm_resource_group.workload.name
+  size                            = local.uploader_vm_size
+  admin_username                  = "azureuser"
+  disable_password_authentication = true
+  network_interface_ids           = [azurerm_network_interface.cnf_bastion[0].id]
+  tags                            = var.tags
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file(var.ssh_public_key_path)
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "ubuntu-24_04-lts"
+    sku       = local.uploader_image_sku
+    version   = "latest"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  custom_data = base64encode(<<-EOT
+    #cloud-config
+    package_update: true
+    packages:
+      - curl
+      - ca-certificates
+      - python3
+      - python3-pip
+      - tar
+      - gzip
+    runcmd:
+      - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+      - curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      - curl -sL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz -o /tmp/oc.tar.gz
+      - tar -xzf /tmp/oc.tar.gz -C /usr/local/bin oc kubectl
+      - touch /var/lib/bastion-ready
+  EOT
+  )
 }
 
 #-----------------------------------------------------------------------------

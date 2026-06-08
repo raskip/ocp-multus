@@ -1,0 +1,19 @@
+# Allow specific UNSAFE (namespaced but not pod-isolated) sysctls on the CNF
+# pool only. High blast radius — NEVER apply cluster-wide. This KubeletConfig
+# targets only the `appworker` MachineConfigPool, so the rest of the cluster is
+# unaffected. Pods must still request these sysctls in their securityContext.
+#
+# TODO(Nokia): replace the example below with the exact unsafe sysctls the CNFs
+# require (e.g. net.ipv4.tcp_* / net.core.* tuning). Applying this rolls the
+# appworker pool.
+apiVersion: machineconfiguration.openshift.io/v1
+kind: KubeletConfig
+metadata:
+  name: appworker-unsafe-sysctls
+spec:
+  machineConfigPoolSelector:
+    matchLabels:
+      pools.operator.machineconfiguration.openshift.io/appworker: ""
+  kubeletConfig:
+    allowedUnsafeSysctls:
+      - "net.core.somaxconn"

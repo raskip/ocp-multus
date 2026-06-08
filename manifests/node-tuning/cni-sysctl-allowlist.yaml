@@ -1,0 +1,26 @@
+# Allowlist of interface-scoped sysctls that Multus is permitted to set on a
+# pod's secondary interfaces (via the NAD `sysctls` / tuning plugin).
+#
+# IMPORTANT: this ConfigMap is cluster-managed and lives in the openshift-multus
+# namespace. It already ships with a default allowlist. Do NOT blindly replace
+# it — MERGE Nokia's required entries with the existing ones so you don't drop
+# defaults. Inspect the current value first:
+#   oc -n openshift-multus get cm cni-sysctl-allowlist -o yaml
+#
+# Entries are anchored regexes; `IFNAME` is the literal placeholder for the
+# interface name (the sysctls are interface-scoped, which is what keeps them
+# safe). TODO(Nokia): replace the list below with the exact required sysctls.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cni-sysctl-allowlist
+  namespace: openshift-multus
+data:
+  allowlist.conf: |-
+    ^net.ipv4.conf.IFNAME.arp_filter$
+    ^net.ipv4.conf.IFNAME.arp_accept$
+    ^net.ipv4.conf.IFNAME.arp_notify$
+    ^net.ipv4.conf.IFNAME.rp_filter$
+    ^net.ipv4.conf.IFNAME.accept_local$
+    ^net.ipv4.conf.IFNAME.send_redirects$
+    ^net.ipv6.conf.IFNAME.disable_ipv6$

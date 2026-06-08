@@ -1,0 +1,22 @@
+# Load the SCTP kernel module on the CNF (appworker) pool.
+# SCTP is the signalling transport for AUSF/UDM and HSS/HLR. Azure Load Balancer
+# cannot carry SCTP, so it rides the Multus secondary NICs (direct L2/L3) — this
+# module just makes the kernel accept SCTP sockets on the node.
+# contents.source is `data:...;base64,` of the literal "sctp\n".
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: appworker
+  name: 99-appworker-load-sctp
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /etc/modules-load.d/sctp.conf
+          mode: 420
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,c2N0cAo=

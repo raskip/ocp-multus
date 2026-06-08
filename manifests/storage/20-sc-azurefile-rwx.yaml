@@ -1,0 +1,51 @@
+# RWX shared storage via the Azure Files CSI driver.
+#
+# Azure Files REQUIRES a storage account (unlike Azure Disk). Two strategies:
+#
+#  (A) DYNAMIC (this manifest, default): the driver auto-creates a storage
+#      account + file share on demand. Simple, but the auto-created account is
+#      public + key-based by default — a locked-down tenant's Azure Policy may
+#      block it. Use only if your tenant allows it.
+#
+#  (B) BYO + PRIVATE ENDPOINT (recommended for locked-down telco tenants):
+#      pre-create a dedicated workload storage account with a private endpoint
+#      in the cluster VNet (see manifests/storage/README.md and the optional
+#      `create_cnf_storage` Terraform piece), then set storageAccount /
+#      resourceGroup / server below and prefer NFS (no keys). See the NFS
+#      variant at the bottom.
+#
+# TODO(Nokia): confirm SMB vs NFS, required tier/IOPS, and whether public SA
+# creation is allowed or BYO+PE is mandatory.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cnf-azurefile-rwx
+provisioner: file.csi.azure.com
+parameters:
+  skuName: Premium_LRS
+  protocol: smb
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - mfsymlinks
+  - cache=strict
+  - actimeo=30
+  - nosharesock
+# ---------------------------------------------------------------------------
+# NFS 4.1 variant (no account keys; requires a premium FileStorage account
+# reachable via a private endpoint). Replace the block above with:
+#
+# parameters:
+#   skuName: Premium_LRS
+#   protocol: nfs
+#   storageAccount: <byo-workload-sa>     # BYO + private endpoint
+#   resourceGroup: <workload-rg>
+#   server: <byo-workload-sa>.file.core.windows.net
+# mountOptions:
+#   - nconnect=4
+#   - noresvport
+#   - actimeo=30
+# ---------------------------------------------------------------------------

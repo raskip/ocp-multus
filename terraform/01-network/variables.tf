@@ -69,6 +69,39 @@ variable "subnet_sriov_cidr" {
 }
 
 #-----------------------------------------------------------------------------
+# Optional Nokia CNF / telco profile (opt-in; default OFF)
+#
+# When enable_cnf_lans = true, this stack additionally creates three telco LAN
+# subnets (OAM + AUSF-UDM + HSS-HLR) for CNF workloads attached via Multus.
+# Defaults OFF so existing users see no change. In BYO-network mode the subnet
+# IDs are supplied via the subnet_{oam,ausfudm,hsshlr}_id inputs instead.
+# See docs/cnf-telco-profile.md.
+#-----------------------------------------------------------------------------
+variable "enable_cnf_lans" {
+  description = "When true, create the three CNF LAN subnets (OAM/AUSF-UDM/HSS-HLR). Default false."
+  type        = bool
+  default     = false
+}
+
+variable "subnet_oam_cidr" {
+  description = "CIDR for the CNF OAM LAN subnet. Only used when enable_cnf_lans = true."
+  type        = string
+  default     = "10.20.4.0/28"
+}
+
+variable "subnet_ausfudm_cidr" {
+  description = "CIDR for the CNF AUSF-UDM external LAN subnet. Only used when enable_cnf_lans = true."
+  type        = string
+  default     = "10.20.5.0/26"
+}
+
+variable "subnet_hsshlr_cidr" {
+  description = "CIDR for the CNF HSS-HLR external LAN subnet. Only used when enable_cnf_lans = true."
+  type        = string
+  default     = "10.20.6.0/26"
+}
+
+#-----------------------------------------------------------------------------
 # BYO-network mode (opt-in)
 #
 # When manage_network_resources = true (default), this stack creates the
@@ -126,6 +159,24 @@ variable "subnet_sriov_id" {
   default     = ""
 }
 
+variable "subnet_oam_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing CNF OAM subnet. Used when manage_network_resources = false and enable_cnf_lans = true."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_ausfudm_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing CNF AUSF-UDM subnet. Used when manage_network_resources = false and enable_cnf_lans = true."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_hsshlr_id" {
+  description = "BYO-network only: full Resource ID of the pre-existing CNF HSS-HLR subnet. Used when manage_network_resources = false and enable_cnf_lans = true."
+  type        = string
+  default     = ""
+}
+
 variable "nsg_master_id" {
   description = "BYO-network only: full Resource ID of the NSG attached to the master subnet. Optional informational input — not referenced when manage_network_resources = false (the NSG is already attached to the subnet)."
   type        = string
@@ -151,9 +202,9 @@ variable "attach_route_table_to_extra_subnets" {
   validation {
     condition = alltrue([
       for s in var.attach_route_table_to_extra_subnets :
-      contains(["master", "bootstrap", "multus", "sriov"], s)
+      contains(["master", "bootstrap", "multus", "sriov", "oam", "ausfudm", "hsshlr"], s)
     ])
-    error_message = "attach_route_table_to_extra_subnets entries must be a subset of: master, bootstrap, multus, sriov."
+    error_message = "attach_route_table_to_extra_subnets entries must be a subset of: master, bootstrap, multus, sriov, oam, ausfudm, hsshlr."
   }
 }
 
@@ -198,6 +249,12 @@ variable "admin_ssh_source_ip" {
 
 variable "create_windows_jump" {
   description = "When true, create an optional Windows Server jump VM in the bootstrap subnet for browser/RDP access to an internal OpenShift console. Default false because many enterprise tenants block Windows images and the VM is not required for install."
+  type        = bool
+  default     = false
+}
+
+variable "create_linux_bastion" {
+  description = "When true, create an optional persistent Linux bastion VM (Helm/Python/oc/az) in the bootstrap subnet for operating CNF workloads and reaching internal LBs (e.g. the ZTS Envoy LB on TCP 8175/8099). No public IP; SSH from admin_ssh_source_ip via the master NSG. Default false."
   type        = bool
   default     = false
 }

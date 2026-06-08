@@ -1,0 +1,22 @@
+# Dedicated MachineConfigPool for the CNF workers. Nodes labelled
+# node-role.kubernetes.io/appworker join this pool, so the Phase D node-tuning
+# MachineConfigs (which carry the `appworker` role label) land ONLY here and the
+# base demo workers stay untouched.
+# Label nodes with scripts/label-cnf-nodes.sh before/after applying this.
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfigPool
+metadata:
+  name: appworker
+  labels:
+    pools.operator.machineconfiguration.openshift.io/appworker: ""
+spec:
+  machineConfigSelector:
+    matchExpressions:
+      - key: machineconfiguration.openshift.io/role
+        operator: In
+        values:
+          - worker
+          - appworker
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/appworker: ""
