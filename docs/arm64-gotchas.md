@@ -53,7 +53,8 @@ the NAD before `oc apply`.
 ## 2. Host-device validation worker
 
 The same naming applies to the optional dedicated/host-device worker
-(`manifests/sriov/01-hostdevice-nad.yaml`). On arm64 the third NIC is
+(`manifests/sriov/01-hostdevice-nad.yaml`), created only with
+`ENABLE_SRIOV=true`. On arm64 the third NIC is
 typically `enP*s2` or `enP*p2`. Verify with `ip -br a` inside the host
 namespace and update the manifest before applying.
 

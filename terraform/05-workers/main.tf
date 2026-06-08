@@ -163,6 +163,7 @@ resource "azurerm_linux_virtual_machine" "worker" {
 # the default worker SKU (D4s_v5 / D4ps_v5, 2 NIC slots) untouched.
 #-----------------------------------------------------------------------------
 resource "azurerm_network_interface" "sriov_worker_primary" {
+  count                 = var.enable_sriov ? 1 : 0
   name                  = "nic-worker-sriov-primary-${var.cluster_name}"
   location              = var.location
   resource_group_name   = local.workload_rg
@@ -178,12 +179,14 @@ resource "azurerm_network_interface" "sriov_worker_primary" {
 }
 
 resource "azurerm_network_interface_backend_address_pool_association" "sriov_worker_ingress" {
-  network_interface_id    = azurerm_network_interface.sriov_worker_primary.id
+  count                   = var.enable_sriov ? 1 : 0
+  network_interface_id    = azurerm_network_interface.sriov_worker_primary[0].id
   ip_configuration_name   = "primary"
   backend_address_pool_id = local.ingress_backend_pool_id
 }
 
 resource "azurerm_network_interface" "sriov_worker_multus" {
+  count                 = var.enable_sriov ? 1 : 0
   name                  = "nic-worker-sriov-multus-${var.cluster_name}"
   location              = var.location
   resource_group_name   = local.workload_rg
@@ -202,6 +205,7 @@ resource "azurerm_network_interface" "sriov_worker_multus" {
 # bonded with the synthetic NIC (`eth2`). The Multus host-device CNI
 # moves the VF into a pod's netns for direct hardware passthrough.
 resource "azurerm_network_interface" "sriov_worker_sriov" {
+  count                          = var.enable_sriov ? 1 : 0
   name                           = "nic-worker-sriov-sriov-${var.cluster_name}"
   location                       = var.location
   resource_group_name            = local.workload_rg
@@ -218,6 +222,7 @@ resource "azurerm_network_interface" "sriov_worker_sriov" {
 }
 
 resource "azurerm_linux_virtual_machine" "sriov_worker" {
+  count               = var.enable_sriov ? 1 : 0
   name                = "vm-worker-sriov-${var.cluster_name}"
   location            = var.location
   resource_group_name = local.workload_rg
@@ -225,9 +230,9 @@ resource "azurerm_linux_virtual_machine" "sriov_worker" {
   zone                = var.sriov_worker_zone
   admin_username      = "core"
   network_interface_ids = [
-    azurerm_network_interface.sriov_worker_primary.id,
-    azurerm_network_interface.sriov_worker_multus.id,
-    azurerm_network_interface.sriov_worker_sriov.id,
+    azurerm_network_interface.sriov_worker_primary[0].id,
+    azurerm_network_interface.sriov_worker_multus[0].id,
+    azurerm_network_interface.sriov_worker_sriov[0].id,
   ]
   source_image_id                 = local.image_id
   disable_password_authentication = true

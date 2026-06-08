@@ -62,7 +62,7 @@ running.
 - `config/cluster.env` populated (copy from `config/cluster.example.env`). Relevant fields for lifecycle:
   - `CLUSTER_NAME`, `WORKLOAD_RESOURCE_GROUP`
   - `CLUSTER_SUBSCRIPTION_ID` (optional; uses current `az` context otherwise)
-  - `CONTROL_PLANE_VM_PREFIX`, `WORKER_VM_PREFIX`, `SRIOV_WORKER_VM_NAME`, `BOOTSTRAP_VM_NAME` (defaults match Terraform)
+  - `CONTROL_PLANE_VM_PREFIX`, `WORKER_VM_PREFIX`, `SRIOV_WORKER_VM_NAME`, `BOOTSTRAP_VM_NAME` (defaults match Terraform; `SRIOV_WORKER_VM_NAME` is used only when `ENABLE_SRIOV=true`)
   - `BACKUP_DIR`, `OPERATIONS_TIMEOUT_MIN`
 
 The scripts auto-discover cluster VMs by exact name pattern within the
@@ -112,7 +112,7 @@ What it does (full sequence):
    inconsistent). Pass `--force-deallocate-after-timeout` only if you
    accept the etcd corruption risk.
 9. **`az vm deallocate --no-wait`** the cluster VMs in batch
-   (masters + workers + SR-IOV worker). The bootstrap VM is never touched.
+   (masters + workers, plus the SR-IOV worker when `ENABLE_SRIOV=true`). The bootstrap VM is never touched.
 
 ### Flags (cluster-shutdown.sh)
 
@@ -162,8 +162,8 @@ What it does (full sequence):
 3. **Approve CSRs**: one quick pass, then a recurring approval loop during
    the wait below.
 4. **Wait until every master node reports Ready.**
-5. **Start the workers** — `az vm start` on the worker VMs and the SR-IOV
-   worker, now that the control plane is healthy.
+5. **Start the workers** — `az vm start` on the worker VMs and, when
+   `ENABLE_SRIOV=true`, the SR-IOV worker, now that the control plane is healthy.
 6. **Wait until every worker reports Ready** (auto-approves kubelet CSRs as they appear).
 7. **Uncordon** every node (skip with `--skip-uncordon`).
 8. **Wait for cluster operators** to converge: `Available=True / Progressing=False / Degraded=False` on every `clusteroperator`. If this does not happen within `OPERATIONS_TIMEOUT_MIN`, the script exits non-zero — startup is not considered successful.
@@ -208,7 +208,7 @@ make workers-up         # start workers, auto-approve CSRs, wait Ready, uncordon
 
 `workers-down` runs the same wait-for-stopped + refuse-to-deallocate safety
 as the full graceful shutdown, so workers that don't gracefully stop will
-not be hard-deallocated. The SR-IOV worker is included in the worker set.
+not be hard-deallocated. When present (`ENABLE_SRIOV=true`), the SR-IOV worker is included in the worker set.
 
 Use `bash scripts/cluster-scale-workers.sh status` to see worker VM state
 and node Ready/SchedulingDisabled together.
@@ -283,7 +283,7 @@ master         vm-master-1-lab                              PowerState/running
 master         vm-master-2-lab                              PowerState/running
 worker         vm-worker-0-lab                              PowerState/running
 worker         vm-worker-1-lab                              PowerState/running
-sriov-worker   vm-worker-sriov-lab                          PowerState/running
+sriov-worker   vm-worker-sriov-lab                          PowerState/running  # when ENABLE_SRIOV=true
 
 [2026-05-25T15:55:32Z] === kubeconfig / cluster context ===
 [2026-05-25T15:55:32Z] [INFO]  user:   kube:admin
@@ -389,9 +389,9 @@ master         vm-master-0-lab                              PowerState/deallocat
 [2026-05-26T06:38:53Z] [INFO]  waiting up to 45m for nodes node-role.kubernetes.io/master to become Ready...
 [2026-05-26T06:42:11Z] [INFO]  nodes node-role.kubernetes.io/master: 3/3 Ready
 
-[2026-05-26T06:42:11Z] === starting worker VMs (including SR-IOV worker) now that control plane is Ready ===
+[2026-05-26T06:42:11Z] === starting worker VMs (including any SR-IOV worker when present) now that control plane is Ready ===
 [2026-05-26T06:42:11Z] [INFO]  starting 2 worker VMs
-[2026-05-26T06:42:14Z] [INFO]  starting 1 sriov-worker VMs
+[2026-05-26T06:42:14Z] [INFO]  starting 1 sriov-worker VMs  # when ENABLE_SRIOV=true
 
 [2026-05-26T06:43:55Z] === waiting for worker nodes to become Ready ===
 [2026-05-26T06:48:33Z] [INFO]  nodes node-role.kubernetes.io/worker: 3/3 Ready
@@ -425,7 +425,7 @@ A fresh `make cluster-status` should now show everything green again.
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| `cluster-shutdown` complains "no cluster VMs found" | VM names don't match the pattern in `config/cluster.env` | Set `CONTROL_PLANE_VM_PREFIX` / `WORKER_VM_PREFIX` / `SRIOV_WORKER_VM_NAME` to match what Terraform created. |
+| `cluster-shutdown` complains "no cluster VMs found" | VM names don't match the pattern in `config/cluster.env` | Set `CONTROL_PLANE_VM_PREFIX` / `WORKER_VM_PREFIX` / optional `SRIOV_WORKER_VM_NAME` to match what Terraform created. |
 | `cluster-shutdown` errors with "expected at least 3 control plane nodes" | Cluster lost masters before shutdown | Investigate first; pass `--no-preflight` only if you know it's safe (e.g. you intentionally have a 1-master lab cluster). |
 | `cluster-shutdown` errors "refusing to deallocate VMs that did not gracefully stop" | A node didn't respond to `shutdown -h` within `--timeout` | SSH/console to the node, investigate, then re-run. Or pass `--force-deallocate-after-timeout` if you accept the etcd risk. |
 | `oc debug ... shutdown -h 1` returns non-zero | Node already going down, or container couldn't start because kubelet is stressed | Script logs a warning and continues — usually fine. |

@@ -1,6 +1,10 @@
 cluster_subscription_id = "00000000-0000-0000-0000-000000000000"
 location                = "northeurope"
 cluster_name            = "lab"
+
+# SR-IOV demo worker is opt-in (default false). Must match enable_sriov in
+# terraform/01-network. Set ENABLE_SRIOV=true in config/cluster.env.
+enable_sriov            = false
 # vm_size and sriov_worker_vm_size are set by scripts/render-tfvars.sh as
 # vm-size.auto.tfvars from config/cluster.env (WORKER_VM_SIZE and
 # SRIOV_WORKER_VM_SIZE). *.auto.tfvars overrides this file in terraform

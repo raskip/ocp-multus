@@ -18,8 +18,8 @@ scripts/cluster-startup.sh [--no-approve] [--skip-uncordon]
 3. One pass of kubelet CSR approval (unless `--no-approve`), then a
    recurring approval loop during the wait below.
 4. Wait until every master is `Ready`.
-5. `az vm start` on the worker VMs (and the SR-IOV worker), now that
-   the control plane is healthy.
+5. `az vm start` on the worker VMs (and the SR-IOV worker when
+   present / `ENABLE_SRIOV=true`), now that the control plane is healthy.
 6. Wait until every worker is `Ready`, approving CSRs as they appear.
 7. Uncordon every node unless `--skip-uncordon`.
 8. Wait for every `clusteroperator` to be `Available=True / Progressing=False / Degraded=False`.

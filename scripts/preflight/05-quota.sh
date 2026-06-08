@@ -6,11 +6,11 @@
 #   3x control plane @ 8 vCPU = 24
 #   2x worker        @ 4 vCPU =  8
 #   1x bootstrap     @ 4 vCPU =  4  (short-lived, but consumed during install)
-#   1x SR-IOV worker @ 8 vCPU =  8  (optional)
 #   uploader VM      @ 2 vCPU =  2
+#   1x SR-IOV worker @ 8 vCPU =  8  (only if ENABLE_SRIOV=true)
 #   Windows jump VM  @ 2 vCPU =  2  (only if CREATE_WINDOWS_JUMP=true)
-# Required minimum: ~46 vCPU. We warn under 60 to give headroom for
-# manual scaling / patch retries.
+# Required minimum: ~38 vCPU (46 with the SR-IOV worker). We warn under 60
+# to give headroom for manual scaling / patch retries.
 #
 # Read-only.
 
@@ -37,7 +37,10 @@ case "${ARCHITECTURE:-x86_64}" in
   *)      FAMILIES=("standardDSv5Family" "standardDv5Family") ;;
 esac
 
-MIN_REQUIRED=46
+MIN_REQUIRED=38
+if [[ "${ENABLE_SRIOV:-false}" == "true" ]]; then
+  MIN_REQUIRED=$((MIN_REQUIRED + 8))
+fi
 if [[ "${CREATE_WINDOWS_JUMP:-false}" == "true" ]]; then
   MIN_REQUIRED=$((MIN_REQUIRED + 2))
 fi

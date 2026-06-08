@@ -17,7 +17,7 @@ peering) see [`docs/network-prereqs.md`](../../docs/network-prereqs.md).
 |---|---|
 | `00-preflight.{sh,ps1}` | Verify `az` is logged in, the right subscription is selected, required extensions are installed |
 | `01-create-vnet.{sh,ps1}` | Create the network RG and the spoke VNet |
-| `02-create-subnets-and-nsg.{sh,ps1}` | Create the 5 subnets, master and worker NSGs with the minimum rules from `docs/network-prereqs.md` |
+| `02-create-subnets-and-nsg.{sh,ps1}` | Create the core OpenShift subnets (master/bootstrap/worker/multus; the SR-IOV subnet is optional, `ENABLE_SRIOV=true`) plus master and worker NSGs with the minimum rules from `docs/network-prereqs.md` |
 | `03-create-udr.{sh,ps1}` | Create the route table, add the `0.0.0.0/0 → <hub-fw>` default route, and attach it to master/worker/bootstrap/multus subnets |
 | `99-cleanup.{sh,ps1}` | Tear down everything created above (deletes the RG — use with care) |
 

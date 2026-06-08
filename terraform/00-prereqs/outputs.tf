@@ -14,12 +14,13 @@ output "private_dns_zone_id" {
   value = azurerm_private_dns_zone.cluster.id
 }
 
+# null when create_public_dns = false (internal-only).
 output "public_dns_subzone_name" {
-  value = azurerm_dns_zone.public_subzone.name
+  value = one(azurerm_dns_zone.public_subzone[*].name)
 }
 
 output "public_dns_subzone_nameservers" {
-  value = azurerm_dns_zone.public_subzone.name_servers
+  value = one(azurerm_dns_zone.public_subzone[*].name_servers)
 }
 
 output "storage_account_name" {

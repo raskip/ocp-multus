@@ -13,8 +13,9 @@ once after cloning — it auto-checks all of these and points to
 install hints if anything is missing.
 
 > Also assumes the pre-install procurement work is already done (Red
-> Hat pull secret in hand, Azure SP + roles, DNS delegation, vCPU
-> quota, firewall outbound allowlist, and proxy/TLS-inspection decision).
+> Hat pull secret in hand, Azure SP + roles, optional public DNS
+> delegation, vCPU quota, firewall outbound allowlist, and
+> proxy/TLS-inspection decision).
 > If not, start at
 > [`pre-install-checklist.md`](./pre-install-checklist.md).
 
@@ -124,7 +125,9 @@ oc -n multus-demo exec deploy/dualnic -- ip -br a
 
 See [`multus-validation.md`](./multus-validation.md) for the full
 walk-through (NIC-name confirmation, Whereabouts IPAM, host-device /
-SR-IOV demo, arm64 gotchas, cleanup).
+SR-IOV demo, arm64 gotchas, cleanup). SR-IOV is opt-in
+(`ENABLE_SRIOV=true`); off by default the SR-IOV demo worker and its
+subnet are not created.
 
 ## Day-2 helpers
 

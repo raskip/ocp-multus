@@ -224,7 +224,7 @@ KUBECONFIG_KV_URI=$(az keyvault secret show \
     --query id -o tsv | sed 's|/[^/]*$||')
 ```
 
-Create the shutdown job:
+Create the shutdown job (`SRIOV_WORKER_VM_NAME` is only used when the optional SR-IOV worker exists / `ENABLE_SRIOV=true`):
 
 ```bash
 az containerapp job create \
@@ -285,7 +285,7 @@ EOF
 > `IDENTITY_HEADER` for the IMDS sidecar, but **not** `AZURE_CLIENT_ID` —
 > that's why we pass it explicitly.
 
-Create the startup job (same shape, different command + schedule):
+Create the startup job (same shape, different command + schedule; `SRIOV_WORKER_VM_NAME` is only used when the optional SR-IOV worker exists / `ENABLE_SRIOV=true`):
 
 ```bash
 az containerapp job create \
@@ -687,7 +687,7 @@ jobs:
             ASSUME_YES=1 OPERATIONS_TIMEOUT_MIN=45 make cluster-shutdown
 ```
 
-The pipeline variables (`CLUSTER_NAME`, `CLUSTER_SUBSCRIPTION_ID`, etc.)
+The pipeline variables (`CLUSTER_NAME`, `CLUSTER_SUBSCRIPTION_ID`, etc.; `SRIOV_WORKER_VM_NAME` only matters when `ENABLE_SRIOV=true`)
 come from the `ocp-lifecycle` variable group. Bind the group to Key Vault
 so `KUBECONFIG_B64` and any other secrets are sourced from there rather
 than checked into the pipeline definition.

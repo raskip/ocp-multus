@@ -7,7 +7,7 @@ param(
   [string]$Location  = ($env:LOCATION    ?? 'northeurope'),
   [string]$NetworkRg = ($env:NETWORK_RG  ?? 'REDACTED_RESOURCE_GROUPwork'),
   [string]$VnetName  = ($env:VNET_NAME   ?? 'vnet-ocp-spoke'),
-  [string]$VnetCidr  = ($env:VNET_CIDR   ?? '10.20.0.0/22')
+  [string]$VnetCidr  = ($env:VNET_CIDR   ?? '10.20.0.0/21')
 )
 
 $ErrorActionPreference = 'Stop'

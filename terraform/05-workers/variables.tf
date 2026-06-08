@@ -22,8 +22,13 @@ variable "enable_cnf_lans" {
   type        = bool
   default     = false
 }
+variable "enable_sriov" {
+  description = "When true, create the SR-IOV demo worker VM and its NICs. Must match enable_sriov in 01-network (which creates the snet-ocp-sriov subnet). Default false."
+  type        = bool
+  default     = false
+}
 variable "sriov_worker_vm_size" {
-  description = "VM size for the SR-IOV demo worker. D8s_v5 (x86_64) and D8ps_v5 (arm64) both have 4 NIC slots and support Accelerated Networking."
+  description = "VM size for the SR-IOV demo worker. Only used when enable_sriov = true. D8s_v5 (x86_64) and D8ps_v5 (arm64) both have 4 NIC slots and support Accelerated Networking."
   type        = string
   default     = "Standard_D8s_v5"
 }

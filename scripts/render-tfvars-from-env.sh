@@ -47,8 +47,19 @@ require LOCATION
 require WORKLOAD_RESOURCE_GROUP
 require VIRTUAL_NETWORK
 require NETWORK_RESOURCE_GROUP
-require PARENT_DNS_ZONE
-require PARENT_DNS_RESOURCE_GROUP
+# Public DNS is opt-in (CREATE_PUBLIC_DNS, default false = internal-only). The
+# parent public zone vars are only required when the repo creates the public
+# sub-zone + NS delegation. See docs/dns-internal-only.md.
+: "${CREATE_PUBLIC_DNS:=false}"
+if [[ "$CREATE_PUBLIC_DNS" == "true" ]]; then
+  require PARENT_DNS_ZONE
+  require PARENT_DNS_RESOURCE_GROUP
+fi
+# Default to empty when internal-only so the heredoc below stays safe under
+# `set -u`; the gated Terraform resources are not created, so the values are
+# unused.
+: "${PARENT_DNS_ZONE:=}"
+: "${PARENT_DNS_RESOURCE_GROUP:=}"
 require ADMIN_SSH_SOURCE_IP
 require ARCHITECTURE
 
@@ -63,12 +74,15 @@ require ARCHITECTURE
 : "${SUBNET_MASTER_CIDR:=10.20.1.0/28}"
 : "${SUBNET_WORKER_CIDR:=10.20.1.16/28}"
 : "${SUBNET_BOOTSTRAP_CIDR:=10.20.1.32/28}"
-: "${SUBNET_MULTUS_CIDR:=10.20.2.0/24}"
-: "${SUBNET_SRIOV_CIDR:=10.20.3.0/24}"
+: "${SUBNET_MULTUS_CIDR:=10.20.2.0/23}"
+: "${SUBNET_SRIOV_CIDR:=10.20.7.0/24}"
 
 # Optional CNF profile (default OFF). CNF_PROFILE toggles enable_cnf_lans in the
 # 01-network and 05-workers stacks; the 3 LAN CIDRs default to placeholders.
 : "${CNF_PROFILE:=false}"
+# SR-IOV demo worker is opt-in (default OFF). ENABLE_SRIOV gates enable_sriov in
+# 01-network (snet-ocp-sriov subnet) and 05-workers (SR-IOV demo worker VM).
+: "${ENABLE_SRIOV:=false}"
 : "${SUBNET_OAM_CIDR:=10.20.4.0/28}"
 : "${SUBNET_AUSFUDM_CIDR:=10.20.5.0/26}"
 : "${SUBNET_HSSHLR_CIDR:=10.20.6.0/26}"
@@ -131,6 +145,7 @@ parent_dns_resource_group    = $(hcl_str "$PARENT_DNS_RESOURCE_GROUP")
 workload_resource_group_name = $(hcl_str "$WORKLOAD_RESOURCE_GROUP")
 vnet_name                    = $(hcl_str "$VIRTUAL_NETWORK")
 vnet_resource_group          = $(hcl_str "$NETWORK_RESOURCE_GROUP")
+create_public_dns            = $CREATE_PUBLIC_DNS
 use_legacy_dns_layout        = $USE_LEGACY_DNS_LAYOUT
 EOF
 )"
@@ -177,6 +192,7 @@ subnet_bootstrap_cidr        = $(hcl_str "$SUBNET_BOOTSTRAP_CIDR")
 subnet_multus_cidr           = $(hcl_str "$SUBNET_MULTUS_CIDR")
 subnet_sriov_cidr            = $(hcl_str "$SUBNET_SRIOV_CIDR")
 enable_cnf_lans              = $CNF_PROFILE
+enable_sriov                 = $ENABLE_SRIOV
 subnet_oam_cidr              = $(hcl_str "$SUBNET_OAM_CIDR")
 subnet_ausfudm_cidr          = $(hcl_str "$SUBNET_AUSFUDM_CIDR")
 subnet_hsshlr_cidr           = $(hcl_str "$SUBNET_HSSHLR_CIDR")
@@ -208,6 +224,10 @@ done
 
 # CNF profile toggle for the workers stack (must match 01-network/enable_cnf_lans).
 printf '%s\n' "enable_cnf_lans = $CNF_PROFILE" \
+  >> "$REPO_ROOT/terraform/05-workers/from-env.auto.tfvars"
+
+# SR-IOV worker toggle for the workers stack (must match 01-network/enable_sriov).
+printf '%s\n' "enable_sriov = $ENABLE_SRIOV" \
   >> "$REPO_ROOT/terraform/05-workers/from-env.auto.tfvars"
 
 if [[ -n "${META_INFRA:-}" ]]; then

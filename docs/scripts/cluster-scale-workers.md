@@ -1,7 +1,7 @@
 # `scripts/cluster-scale-workers.sh`
 
-Stop or start ONLY the worker VMs (including the SR-IOV worker),
-leaving the control plane up. Cheaper than a full cluster shutdown when
+Stop or start ONLY the worker VMs (including the SR-IOV worker when
+present / `ENABLE_SRIOV=true`), leaving the control plane up. Cheaper than a full cluster shutdown when
 you only want to pause workload compute and still need `oc` access.
 
 ## Synopsis

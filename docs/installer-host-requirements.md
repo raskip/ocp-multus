@@ -76,7 +76,7 @@ before opening access requests.
 | Subscription (cluster sub) | **Reader** | `openshift-install` validates locations, SKUs, HyperVGeneration via ARM. |
 | Workload resource group (`$WORKLOAD_RESOURCE_GROUP`) | **Contributor** | Cluster runtime creates load balancers, public IPs, disks, etc. |
 | Network resource group (`$NETWORK_RESOURCE_GROUP`) | **Network Contributor** for repo-managed networking, or BYO-network least-privilege subnet/route grants | Repo-managed mode creates/updates network resources. In BYO mode, pre-created subnets only need read/join and the route table needs route update rights. |
-| Parent DNS resource group (`$PARENT_DNS_RESOURCE_GROUP`) | **DNS Zone Contributor** (cross-sub) | `make prereqs` adds the sub-zone NS-record into the parent zone. |
+| Parent DNS resource group (`$PARENT_DNS_RESOURCE_GROUP`) — only when `CREATE_PUBLIC_DNS=true` | **DNS Zone Contributor** (cross-sub) | When public DNS is enabled, `make prereqs` adds the sub-zone NS-record into the parent zone. Off by default. |
 | Private DNS RG / zone for `privatelink.blob.core.windows.net` | **Private DNS Zone Contributor** | `make network` creates the storage Private Endpoint DNS A-record and VNet link. |
 | Installer storage account / workload RG | **Storage Blob Data Owner** data-plane access, or permission for Terraform to create that assignment | RHCOS and ignition uploads need blob data-plane access when shared-key auth is disabled. |
 
@@ -146,7 +146,7 @@ covers the same Azure-reach surface from the installer host before
 # 1. Azure ARM + identity
 az account show --query '{name:name,id:id,user:user.name}' -o table
 
-# 2. Parent DNS reach (replace with your zone)
+# 2. Parent DNS reach (only when CREATE_PUBLIC_DNS=true; replace with your zone)
 az network dns zone show -g "$PARENT_DNS_RESOURCE_GROUP" -n "$PARENT_DNS_ZONE" \
   --subscription "$DNS_SUBSCRIPTION_ID" --query name -o tsv
 

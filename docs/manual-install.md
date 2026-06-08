@@ -13,7 +13,7 @@ The Terraform stages are intentionally separate so you can inspect and troublesh
 - Azure CLI, Terraform ≥ 1.6, `jq`, `make`, `bash` ≥ 4, `openshift-install`, and `oc`. Run `make verify` first — it auto-checks the host-tool prerequisites and points to install hints if anything is missing. The cluster's CPU architecture is independent of the host that runs this installer — see [README → Where to run the installer](../README.md#where-to-run-the-installer) for supported host environments and [cpu-architecture.md → Host CPU vs cluster CPU](cpu-architecture.md#host-cpu-vs-cluster-cpu-they-are-independent) for the host-vs-cluster matrix. Use `make tools` to download matching `openshift-install` + `oc` binaries.
 - Red Hat pull secret.
 - SSH keypair for RHCOS and helper VMs.
-- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. With `CNF_PROFILE=true` the workers use `Standard_D8s_v5` (4 NIC slots) instead. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [cpu-architecture.md](cpu-architecture.md).
+- x86_64 D-series VM quota (`Standard_D8s_v5` master, `Standard_D4s_v5` worker) in the chosen region. With `CNF_PROFILE=true` the workers use `Standard_D8s_v5` (4 NIC slots) instead. SR-IOV is opt-in (`ENABLE_SRIOV=true`); off by default the SR-IOV demo worker and its subnet are not created, so its extra 8 vCPU is only consumed when enabled. For an ARM-based deployment, set `ARCHITECTURE=arm64` in `config/cluster.env` and have D*ps_v5 quota instead. See [cpu-architecture.md](cpu-architecture.md).
 
 ## Open items — confirm with your platform team
 
@@ -29,10 +29,12 @@ behalf and that causes confusing failures if mis-set.
    you need a deliberate `proxy:` / `additionalTrustBundle` plan before
    install. Current automation documents the fields but does **not** yet
    render them from `config/cluster.env`.
-2. **DNS delegation.** The OpenShift `baseDomain` must be a delegated
-   public sub-zone of a parent zone your org owns. Confirm whose
-   subscription holds the parent zone and that you have write access to
-   add the NS record.
+2. **DNS.** Internal-only by default — the repo creates no public DNS.
+   Public delegation is opt-in (`CREATE_PUBLIC_DNS=true`): when enabled,
+   the OpenShift `baseDomain` is a delegated public sub-zone of a parent
+   zone your org owns, so confirm whose subscription holds the parent zone
+   and that you have write access to add the NS record. See
+   [`dns-internal-only.md`](./dns-internal-only.md).
 3. **Identity model.** Day-1 install needs an Azure Service Principal (or
    equivalent identity). Day-2 lifecycle scripts (etcd-backup, shutdown,
    startup) need their own credentials — they can reuse the install-time
@@ -241,7 +243,8 @@ workers).
 
 After install, you can validate Multus secondary networking with the
 macvlan demo and (if you provisioned the optional SR-IOV-style worker)
-the host-device demo.
+the host-device demo. SR-IOV is opt-in (`ENABLE_SRIOV=true`); off by
+default the SR-IOV demo worker and its subnet are not created.
 
 For a production telco CNF topology (per-LAN ipvlan NADs, SCTP, node tuning,
 dedicated worker NICs, RWX storage, in-cluster registry) see the optional

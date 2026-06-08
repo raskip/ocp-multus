@@ -1,4 +1,5 @@
-# 02-create-subnets-and-nsg.ps1 - create the 5 OpenShift subnets and the
+# 02-create-subnets-and-nsg.ps1 - create the OpenShift subnets (master,
+# bootstrap, worker, multus; plus an optional SR-IOV subnet) and the
 # master + worker NSGs (with the minimum rules from docs/network-prereqs.md).
 #
 # Subnets are NOT given a route table here - that is done by
@@ -12,8 +13,11 @@ param(
   [string]$MasterCidr        = ($env:SUBNET_MASTER_CIDR    ?? '10.20.0.0/27'),
   [string]$BootstrapCidr     = ($env:SUBNET_BOOTSTRAP_CIDR ?? '10.20.0.32/28'),
   [string]$WorkerCidr        = ($env:SUBNET_WORKER_CIDR    ?? '10.20.1.0/24'),
-  [string]$MultusCidr        = ($env:SUBNET_MULTUS_CIDR    ?? '10.20.2.0/24'),
-  [string]$SriovCidr         = ($env:SUBNET_SRIOV_CIDR     ?? '10.20.3.0/27'),
+  [string]$MultusCidr        = ($env:SUBNET_MULTUS_CIDR    ?? '10.20.2.0/23'),
+  [string]$SriovCidr         = ($env:SUBNET_SRIOV_CIDR     ?? '10.20.7.0/27'),
+  # SR-IOV subnet is optional. The repo's SR-IOV demo worker is off by default
+  # (ENABLE_SRIOV=true). Set ENABLE_SRIOV=true to also create snet-ocp-sriov.
+  [string]$EnableSriov       = ($env:ENABLE_SRIOV          ?? 'false'),
   [string]$NsgMaster         = ($env:NSG_MASTER            ?? 'nsg-ocp-master'),
   [string]$NsgWorker         = ($env:NSG_WORKER            ?? 'nsg-ocp-worker')
 )
@@ -107,11 +111,18 @@ New-Subnet 'snet-ocp-master'    $MasterCidr    $NsgMaster
 New-Subnet 'snet-ocp-bootstrap' $BootstrapCidr $NsgWorker
 New-Subnet 'snet-ocp-worker'    $WorkerCidr    $NsgWorker
 New-Subnet 'snet-ocp-multus'    $MultusCidr    $NsgWorker
-New-Subnet 'snet-ocp-sriov'     $SriovCidr     $NsgWorker
+
+$SubnetsOut = @('snet-ocp-master','snet-ocp-bootstrap','snet-ocp-worker','snet-ocp-multus')
+if ($EnableSriov -eq 'true') {
+  New-Subnet 'snet-ocp-sriov'   $SriovCidr     $NsgWorker
+  $SubnetsOut += 'snet-ocp-sriov'
+} else {
+  Write-Host "==> Skipping snet-ocp-sriov (ENABLE_SRIOV=false; SR-IOV demo worker is off by default)"
+}
 
 Write-Host ""
 Write-Host "==> Subnet IDs (paste into terraform/01-network/terraform.tfvars):"
-foreach ($sn in @('snet-ocp-master','snet-ocp-bootstrap','snet-ocp-worker','snet-ocp-multus','snet-ocp-sriov')) {
+foreach ($sn in $SubnetsOut) {
   $id  = az network vnet subnet show -g $NetworkRg --vnet-name $VnetName -n $sn --query id -o tsv
   $var = ($sn -replace '-','_') + '_id'
   Write-Host ("  {0,-22} = {1}" -f $var, $id)

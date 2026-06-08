@@ -7,7 +7,7 @@ set -euo pipefail
 LOCATION="${LOCATION:-northeurope}"
 NETWORK_RG="${NETWORK_RG:-REDACTED_RESOURCE_GROUPwork}"
 VNET_NAME="${VNET_NAME:-vnet-ocp-spoke}"
-VNET_CIDR="${VNET_CIDR:-10.20.0.0/22}"
+VNET_CIDR="${VNET_CIDR:-10.20.0.0/21}"
 
 echo "==> Resource group: $NETWORK_RG ($LOCATION)"
 az group create \

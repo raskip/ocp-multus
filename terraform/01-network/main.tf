@@ -235,8 +235,18 @@ resource "azapi_resource" "subnet_multus" {
   depends_on             = [azapi_resource.subnet_bootstrap]
 }
 
+# CIDR-overlap guard for the SR-IOV subnet. The Multus subnet defaults to
+# 10.20.2.0/23, which spans the range SR-IOV historically used, so when SR-IOV
+# is enabled we assert its CIDR does not overlap Multus. _ovl_start maps each
+# CIDR to its integer network address; _ovl_size to its address count.
+locals {
+  _ovl_cidrs = [var.subnet_multus_cidr, var.subnet_sriov_cidr]
+  _ovl_start = { for c in local._ovl_cidrs : c => sum([for i, o in split(".", split("/", c)[0]) : tonumber(o) * pow(256, 3 - i)]) }
+  _ovl_size  = { for c in local._ovl_cidrs : c => pow(2, 32 - tonumber(split("/", c)[1])) }
+}
+
 resource "azapi_resource" "subnet_sriov" {
-  count                     = var.manage_network_resources ? 1 : 0
+  count                     = var.manage_network_resources && var.enable_sriov ? 1 : 0
   type                      = "Microsoft.Network/virtualNetworks/subnets@2023-11-01"
   name                      = "snet-ocp-sriov"
   parent_id                 = local.vnet_id
@@ -254,6 +264,13 @@ resource "azapi_resource" "subnet_sriov" {
   }
   response_export_values = ["id"]
   depends_on             = [azapi_resource.subnet_multus]
+
+  lifecycle {
+    precondition {
+      condition     = (local._ovl_start[var.subnet_multus_cidr] > local._ovl_start[var.subnet_sriov_cidr] + local._ovl_size[var.subnet_sriov_cidr] - 1) || (local._ovl_start[var.subnet_sriov_cidr] > local._ovl_start[var.subnet_multus_cidr] + local._ovl_size[var.subnet_multus_cidr] - 1)
+      error_message = "subnet_sriov_cidr (${var.subnet_sriov_cidr}) overlaps subnet_multus_cidr (${var.subnet_multus_cidr}). Choose non-overlapping ranges, e.g. relocate SR-IOV to 10.20.7.0/24."
+    }
+  }
 }
 
 #-----------------------------------------------------------------------------
@@ -334,7 +351,7 @@ locals {
   subnet_worker_id    = var.manage_network_resources ? azapi_resource.subnet_worker[0].id : var.subnet_worker_id
   subnet_bootstrap_id = var.manage_network_resources ? azapi_resource.subnet_bootstrap[0].id : var.subnet_bootstrap_id
   subnet_multus_id    = var.manage_network_resources ? azapi_resource.subnet_multus[0].id : var.subnet_multus_id
-  subnet_sriov_id     = var.manage_network_resources ? azapi_resource.subnet_sriov[0].id : var.subnet_sriov_id
+  subnet_sriov_id     = var.manage_network_resources ? one(azapi_resource.subnet_sriov[*].id) : var.subnet_sriov_id
   subnet_oam_id       = var.manage_network_resources ? one(azapi_resource.subnet_oam[*].id) : var.subnet_oam_id
   subnet_ausfudm_id   = var.manage_network_resources ? one(azapi_resource.subnet_ausfudm[*].id) : var.subnet_ausfudm_id
   subnet_hsshlr_id    = var.manage_network_resources ? one(azapi_resource.subnet_hsshlr[*].id) : var.subnet_hsshlr_id

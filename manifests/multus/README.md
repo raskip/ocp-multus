@@ -56,8 +56,10 @@ default service account access to the `privileged` SCC.
    oc -n multus-demo exec deploy/dualnic -- ip -br a
    ```
 
-The default example uses `10.20.2.128/25` for pod secondary addresses
-and reserves the lower half of `10.20.2.0/24` for Azure-assigned NIC IPs.
+The default example uses the upper `/24` of the Multus `/23` subnet
+(`10.20.3.1`–`10.20.3.254`, IPAM range `10.20.2.0/23`) for pod secondary
+addresses and reserves the lower `/24` (`10.20.2.0/24`) for
+Azure-assigned NIC IPs.
 
 ## Cleanup
 

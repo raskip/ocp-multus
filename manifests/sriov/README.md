@@ -4,7 +4,7 @@ This demo uses Multus host-device CNI to move a dedicated Azure Accelerated Netw
 
 ## Prerequisites
 
-- Optional host-device worker is joined and `Ready`.
+- Optional host-device worker is enabled with `ENABLE_SRIOV=true`, joined, and `Ready`; otherwise these validation manifests have no target node.
 - Node is labeled:
 
   ```bash

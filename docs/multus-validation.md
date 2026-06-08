@@ -1,11 +1,11 @@
 # Multus secondary-network validation
 
-This repo provisions Azure infrastructure that supports two Multus
-validation patterns out of the box:
+This repo provisions Azure infrastructure that supports Multus
+validation patterns:
 
 - **macvlan**, on the worker pool's secondary NIC (`snet-ocp-multus`).
-- **host-device / SR-IOV-style**, on an optional dedicated worker that
-  uses Azure Accelerated Networking.
+- **host-device / SR-IOV-style**, on an opt-in dedicated worker that
+  uses Azure Accelerated Networking (`ENABLE_SRIOV=true`).
 
 Both demos are **optional** — they validate that secondary pod networking
 is wired correctly end-to-end. Skip them if the cluster is for a workload
@@ -60,8 +60,10 @@ secondary NIC and assigns pod IPs from the Whereabouts IPAM range.
    `manifests/multus/01-macvlan-nad.yaml` (`master` field).
 2. Confirm the Whereabouts IPAM range in `01-macvlan-nad.yaml` is inside
    your Multus subnet and does not overlap Azure-assigned NIC IPs. The
-   default example uses `10.20.2.128/25` for pod secondary addresses and
-   reserves the lower half of `10.20.2.0/24` for Azure-assigned NIC IPs.
+   default example uses the `10.20.2.0/23` range, with pod secondary
+   addresses from `10.20.3.1`–`10.20.3.254` and gateway `10.20.2.1`.
+   The lower `/24` of that range is reserved for Azure-assigned worker
+   NIC IPs.
 3. Apply the manifests. The namespace **must be applied first** — it
    sets the PodSecurity labels:
 
@@ -99,8 +101,8 @@ namespace. This is the closest you can get to SR-IOV on stock Azure
 VMs without the SR-IOV Operator.
 
 This demo is only useful if the `terraform/05-workers` stack provisioned
-the optional SR-IOV-style worker (controlled by
-`enable_sriov_worker` in the cluster.env / tfvars).
+the optional SR-IOV-style worker. It is off by default; opt in with
+`ENABLE_SRIOV=true` in `config/cluster.env` (`enable_sriov` in tfvars).
 
 1. Confirm the SR-IOV-style worker is Ready.
 2. Confirm the dedicated NIC name inside RHCOS (default `eth2`):

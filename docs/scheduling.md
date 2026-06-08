@@ -93,7 +93,7 @@ In **Settings → Secrets and variables → Actions → Variables**:
 | `WORKLOAD_RESOURCE_GROUP`   | Resource group containing the cluster VMs         | yes |
 | `CONTROL_PLANE_VM_PREFIX`   | Defaults to `vm-master`                           | no  |
 | `WORKER_VM_PREFIX`          | Defaults to `vm-worker`                           | no  |
-| `SRIOV_WORKER_VM_NAME`      | Defaults to `vm-worker-sriov`                     | no  |
+| `SRIOV_WORKER_VM_NAME`      | Optional SR-IOV worker name; used only when `ENABLE_SRIOV=true` | no  |
 
 These let the workflow build a real `config/cluster.env` at runtime,
 instead of hard-coding values into the workflow file.

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 02-create-subnets-and-nsg.sh - create the 5 OpenShift subnets and the
+# 02-create-subnets-and-nsg.sh - create the OpenShift subnets (master,
+# bootstrap, worker, multus; plus an optional SR-IOV subnet) and the
 # master + worker NSGs (with the minimum rules from docs/network-prereqs.md).
 #
 # Subnets are NOT given a route table here - that is done by
@@ -15,8 +16,11 @@ VNET_NAME="${VNET_NAME:-vnet-ocp-spoke}"
 SUBNET_MASTER_CIDR="${SUBNET_MASTER_CIDR:-10.20.0.0/27}"
 SUBNET_BOOTSTRAP_CIDR="${SUBNET_BOOTSTRAP_CIDR:-10.20.0.32/28}"
 SUBNET_WORKER_CIDR="${SUBNET_WORKER_CIDR:-10.20.1.0/24}"
-SUBNET_MULTUS_CIDR="${SUBNET_MULTUS_CIDR:-10.20.2.0/24}"
-SUBNET_SRIOV_CIDR="${SUBNET_SRIOV_CIDR:-10.20.3.0/27}"
+SUBNET_MULTUS_CIDR="${SUBNET_MULTUS_CIDR:-10.20.2.0/23}"
+# SR-IOV subnet is optional. The repo's SR-IOV demo worker is off by default
+# (ENABLE_SRIOV=true). Set ENABLE_SRIOV=true here to also create snet-ocp-sriov.
+ENABLE_SRIOV="${ENABLE_SRIOV:-false}"
+SUBNET_SRIOV_CIDR="${SUBNET_SRIOV_CIDR:-10.20.7.0/27}"
 
 NSG_MASTER="${NSG_MASTER:-nsg-ocp-master}"
 NSG_WORKER="${NSG_WORKER:-nsg-ocp-worker}"
@@ -113,11 +117,18 @@ create_subnet snet-ocp-master    "$SUBNET_MASTER_CIDR"    "$NSG_MASTER"
 create_subnet snet-ocp-bootstrap "$SUBNET_BOOTSTRAP_CIDR" "$NSG_WORKER"
 create_subnet snet-ocp-worker    "$SUBNET_WORKER_CIDR"    "$NSG_WORKER"
 create_subnet snet-ocp-multus    "$SUBNET_MULTUS_CIDR"    "$NSG_WORKER"
-create_subnet snet-ocp-sriov     "$SUBNET_SRIOV_CIDR"     "$NSG_WORKER"
+
+SUBNETS_OUT=(snet-ocp-master snet-ocp-bootstrap snet-ocp-worker snet-ocp-multus)
+if [[ "$ENABLE_SRIOV" == "true" ]]; then
+  create_subnet snet-ocp-sriov   "$SUBNET_SRIOV_CIDR"     "$NSG_WORKER"
+  SUBNETS_OUT+=(snet-ocp-sriov)
+else
+  echo "==> Skipping snet-ocp-sriov (ENABLE_SRIOV=false; SR-IOV demo worker is off by default)"
+fi
 
 echo
 echo "==> Subnet IDs (paste into terraform/01-network/terraform.tfvars):"
-for sn in snet-ocp-master snet-ocp-bootstrap snet-ocp-worker snet-ocp-multus snet-ocp-sriov; do
+for sn in "${SUBNETS_OUT[@]}"; do
   id=$(az network vnet subnet show -g "$NETWORK_RG" --vnet-name "$VNET_NAME" -n "$sn" --query id -o tsv)
   printf '  %-22s = %s\n' "${sn//-/_}_id" "$id"
 done

@@ -59,13 +59,29 @@ variable "subnet_bootstrap_cidr" {
 }
 
 variable "subnet_multus_cidr" {
-  type    = string
-  default = "10.20.2.0/24"
+  description = "CIDR for the Multus secondary-network subnet. Default /23 gives ~500 pod IPs via Whereabouts IPAM."
+  type        = string
+  default     = "10.20.2.0/23"
+}
+
+#-----------------------------------------------------------------------------
+# Optional SR-IOV demo worker (opt-in; default OFF)
+#
+# When enable_sriov = true, this stack creates the snet-ocp-sriov subnet and
+# terraform/05-workers creates the SR-IOV demo worker VM. Default OFF so the
+# install provisions no SR-IOV resources. In BYO-network mode the subnet ID is
+# supplied via subnet_sriov_id instead. Independent of enable_cnf_lans.
+#-----------------------------------------------------------------------------
+variable "enable_sriov" {
+  description = "When true, create the snet-ocp-sriov subnet (and, in 05-workers, the SR-IOV demo worker). Default false."
+  type        = bool
+  default     = false
 }
 
 variable "subnet_sriov_cidr" {
-  type    = string
-  default = "10.20.3.0/24"
+  description = "CIDR for the SR-IOV demo worker subnet. Only used when enable_sriov = true. Default 10.20.7.0/24 sits clear of the Multus /23; it must not overlap subnet_multus_cidr (enforced by a precondition)."
+  type        = string
+  default     = "10.20.7.0/24"
 }
 
 #-----------------------------------------------------------------------------

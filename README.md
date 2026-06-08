@@ -5,20 +5,22 @@
 
 Self-managed OpenShift Container Platform on Azure VMs using the Azure
 UPI flow, with optional **Multus secondary-network validation** (macvlan
-+ host-device / SR-IOV-style).
++ opt-in host-device / SR-IOV-style).
 
 This repository is a generic public runbook and infrastructure template.
 It assumes you bring an existing Azure VNet (or let Terraform create
-one), a delegated public DNS zone, a Red Hat pull secret, and Azure
-credentials with the right roles. The installer is Bash + Terraform +
-Azure CLI; the cluster is OpenShift's UPI flow.
+one), a Red Hat pull secret, and Azure credentials with the right roles.
+The install is internal-only by default and creates **no public DNS**; a
+delegated public DNS zone is opt-in (`CREATE_PUBLIC_DNS=true`). The
+installer is Bash + Terraform + Azure CLI; the cluster is OpenShift's
+UPI flow.
 
 ## ⚠ Before you start — pre-install procurement
 
 Some prerequisites (Red Hat pull secret, Azure subscription roles,
-DNS delegation, vCPU quota, firewall outbound allowlist, jump-host
-access pattern) take **days or weeks** to procure in an enterprise
-tenant. Don't start the install before you have them.
+optional public DNS delegation, vCPU quota, firewall outbound allowlist,
+jump-host access pattern) take **days or weeks** to procure in an
+enterprise tenant. Don't start the install before you have them.
 
 **→ [`docs/pre-install-checklist.md`](./docs/pre-install-checklist.md)** —
 single page you can forward to your DNS / network / Entra / subscription
@@ -56,9 +58,9 @@ Windows jump-host credentials into a gitignored bundle. See
 
 ## What it deploys
 
-- Public DNS sub-zone delegation for the OpenShift base domain.
+- Optional public DNS sub-zone delegation for the OpenShift base domain (off by default; opt in with `CREATE_PUBLIC_DNS=true`). Internal installs resolve through the private DNS zone only — see [`docs/dns-internal-only.md`](./docs/dns-internal-only.md).
 - Workload resource group, private DNS zone, storage account, and containers.
-- Existing-VNet subnets for control plane, workers, bootstrap, Multus, and SR-IOV-style validation.
+- Existing-VNet subnets for control plane, workers, bootstrap, and Multus; the SR-IOV demo worker and `snet-ocp-sriov` subnet are opt-in (`ENABLE_SRIOV=true`) and off by default.
 - Internal API/MCS and ingress load balancers.
 - Private endpoint access to the storage account.
 - RHCOS image import from the OpenShift installer release stream.
@@ -89,12 +91,12 @@ for endpoint, DNS, and access-path details.
 | `config/cluster.example.env` | Unified config that drives every Terraform stack via `scripts/render-tfvars-from-env.sh`. |
 | `install-config/install-config.yaml.tmpl` | OpenShift install-config template. |
 | `scripts/` | Helper scripts (render config, resolve RHCOS, uploads, bootstrap wait, sanitize, …). |
-| `terraform/00-prereqs` | DNS, resource group, storage, and private DNS prerequisites. |
+| `terraform/00-prereqs` | Resource group, storage, private DNS zone, and optional public DNS sub-zone + delegation (`CREATE_PUBLIC_DNS`). |
 | `terraform/01-network` | Subnets, NSGs, load balancers, private endpoint, uploader VM, optional Windows jump VM, and optional Linux bastion + CNF LAN subnets (CNF profile). |
 | `terraform/02-image` | RHCOS Azure image and Shared Image Gallery version. |
 | `terraform/03-bootstrap` | Bootstrap VM. |
 | `terraform/04-control-plane` | Control-plane VMs. |
-| `terraform/05-workers` | Worker VMs and optional SR-IOV-style worker. |
+| `terraform/05-workers` | Worker VMs and optional SR-IOV-style worker (`ENABLE_SRIOV=true`). |
 | `manifests/multus` | Optional Multus macvlan validation manifests. |
 | `manifests/sriov` | Optional host-device / SR-IOV-style validation manifests. |
 | `manifests/cnf` | Optional CNF profile: Multus ipvlan NADs per telco LAN (see [`docs/cnf-telco-profile.md`](./docs/cnf-telco-profile.md)). |

@@ -24,6 +24,17 @@ pf_require_cmd jq "" || return 0
 
 pf_load_tfvars 00-prereqs || true
 
+# Public DNS is opt-in. When create_public_dns is false (default), the repo
+# provisions NO public zone or NS delegation, so the parent-zone existence and
+# write-permission probes below do not apply. The cluster's api / api-int /
+# *.apps records are served by the private DNS zone instead.
+CREATE_PUBLIC_DNS_EFF="${tfvars__create_public_dns:-${CREATE_PUBLIC_DNS:-false}}"
+if [[ "$CREATE_PUBLIC_DNS_EFF" != "true" ]]; then
+  pf_pass "public DNS disabled (CREATE_PUBLIC_DNS=false) — internal-only, no public sub-zone or NS delegation to verify"
+  pf_info "note: install-config still sets baseDomainResourceGroupName; the OpenShift Azure installer may validate a public base-domain zone there. See docs/dns-internal-only.md"
+  return 0
+fi
+
 PARENT_ZONE="${tfvars__parent_dns_zone:-}"
 PARENT_RG="${tfvars__parent_dns_resource_group:-${DNS_RESOURCE_GROUP:-}}"
 DNS_SUB="${tfvars__dns_subscription_id:-${DNS_SUBSCRIPTION_ID:-${CLUSTER_SUBSCRIPTION_ID:-}}}"

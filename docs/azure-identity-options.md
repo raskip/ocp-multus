@@ -81,11 +81,11 @@ az role assignment create --assignee "$APP_ID" \
 #    BYO-network least-privilege alternative: if the network team
 #    pre-creates subnets, NSGs, and UDR associations, do not grant VNet
 #    Contributor. Instead grant:
-#      - subnet read + join/action on the five OCP subnets
+#      - subnet read + join/action on the four core OCP subnets (plus sriov when ENABLE_SRIOV=true)
 #      - route read/write/delete on the cluster route table
 #    See docs/network-prereqs.md#4a-least-privilege-azure-rbac-for-byo-network-mode.
 
-# 5. Public DNS parent-zone delegation
+# 5. Public DNS parent-zone delegation (only when CREATE_PUBLIC_DNS=true; off by default)
 az role assignment create --assignee "$APP_ID" \
   --role "DNS Zone Contributor" \
   --scope "$PARENT_DNS_ZONE_ID"

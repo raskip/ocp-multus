@@ -14,8 +14,12 @@ create_windows_jump           = false
 subnet_master_cidr            = "10.20.1.0/28"
 subnet_worker_cidr            = "10.20.1.16/28"
 subnet_bootstrap_cidr         = "10.20.1.32/28"
-subnet_multus_cidr            = "10.20.2.0/24"
-subnet_sriov_cidr             = "10.20.3.0/24"
+subnet_multus_cidr            = "10.20.2.0/23"
+
+# SR-IOV demo worker subnet is opt-in (default false). Set ENABLE_SRIOV=true in
+# config/cluster.env. When false, snet-ocp-sriov is not created.
+enable_sriov                  = false
+subnet_sriov_cidr             = "10.20.7.0/24"
 
 # Recommended for hub-spoke + firewall-egress installs: attach the
 # cluster route table to master/bootstrap/multus subnets in addition

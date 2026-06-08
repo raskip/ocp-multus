@@ -38,7 +38,8 @@ OpenShift Azure UPI needs credentials twice:
   `privatelink.blob.core.windows.net` are required. For networking,
   use **Network Contributor on the VNet RG** only in repo-managed mode
   or when the network team accepts that scope; in BYO-network mode the
-  narrower option is subnet read/join on the five OCP subnets plus
+  narrower option is subnet read/join on the four core OCP subnets
+  (plus `snet-ocp-sriov` when `ENABLE_SRIOV=true`) plus
   route update rights on the cluster route table.
 
 See [`azure-identity-options.md`](./azure-identity-options.md) for the
@@ -90,20 +91,29 @@ table on their side.
 ## 5. D-series vCPU quota — `05-quota.sh`
 
 Required minimum for a default cluster (3 masters + 2 workers + 1
-bootstrap + 1 optional SR-IOV worker + 1 uploader):
+bootstrap + 1 uploader):
 
-- ~46 vCPU in the `standardDSv5Family` (x86_64) or `standardDPSv5Family`
+- ~38 vCPU in the `standardDSv5Family` (x86_64) or `standardDPSv5Family`
   (arm64) in the install region.
+
+SR-IOV is opt-in (`ENABLE_SRIOV=true`); off by default the SR-IOV demo
+worker and its subnet are not created. When enabled, add ~8 vCPU for the
+extra D8s_v5/D8ps_v5 worker.
 
 The check warns under 60 vCPU available to give headroom for retries
 and post-install scaling.
 
 ## 6. Parent DNS zone + delegation permission — `06-dns-zone.sh`
 
-`terraform/00-prereqs/` creates the `base_domain` sub-zone as a child
-of `parent_dns_zone` and writes the `NS` delegation. The parent zone
-often lives in a different subscription (`dns_subscription_id`). The
-check verifies:
+**Skipped when `CREATE_PUBLIC_DNS=false` (the default).** Internal-only
+installs create no public zone, so the check reports a single
+informational pass and the probes below do not run. See
+[`dns-internal-only.md`](./dns-internal-only.md).
+
+When `CREATE_PUBLIC_DNS=true`, `terraform/00-prereqs/` creates the
+`base_domain` sub-zone as a child of `parent_dns_zone` and writes the
+`NS` delegation. The parent zone often lives in a different subscription
+(`dns_subscription_id`). The check verifies:
 
 - The parent zone exists in `parent_dns_resource_group`.
 - The current identity has `DNS Zone Contributor` (or Contributor /

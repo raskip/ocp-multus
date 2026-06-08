@@ -21,7 +21,7 @@ flowchart TB
     BOOT["Bootstrap VM"]
     MASTERS["3 control-plane VMs"]
     WORKERS["Worker VMs<br/>primary + Multus NICs"]
-    SRIOV["Optional host-device worker<br/>dedicated accelerated NIC"]
+    SRIOV["Optional host-device worker<br/>ENABLE_SRIOV=true"]
   end
 
   DNS --> SUBZONE
@@ -43,12 +43,12 @@ flowchart TB
 |---|---|---|
 | `snet-ocp-master` | `10.20.0.0/27` | Control-plane primary NICs and the internal API/MCS load balancer. |
 | `snet-ocp-worker` | `10.20.1.0/24` | Worker primary NICs and the internal `*.apps` ingress load balancer. |
-| `snet-ocp-bootstrap` | `10.20.2.0/28` | Transient bootstrap VM, uploader VM, and the optional Windows browser/RDP jump host when `CREATE_WINDOWS_JUMP=true`. |
-| `snet-ocp-multus` | `10.20.3.0/24` | Secondary NICs used by Multus macvlan validation pods. |
-| `snet-ocp-sriov` | `10.20.4.0/27` | Optional dedicated accelerated NICs for host-device / SR-IOV-style validation. |
+| `snet-ocp-bootstrap` | `10.20.0.32/28` | Transient bootstrap VM, uploader VM, and the optional Windows browser/RDP jump host when `CREATE_WINDOWS_JUMP=true`. |
+| `snet-ocp-multus` | `10.20.2.0/23` | Secondary NICs used by Multus macvlan validation pods. |
+| `snet-ocp-sriov` | `10.20.7.0/24` | Optional dedicated accelerated NICs for host-device / SR-IOV-style validation (`ENABLE_SRIOV=true`; off by default). |
 | `snet-ocp-oam` / `-ausfudm` / `-hsshlr` | `10.20.4.0/28` / `…5.0/26` / `…6.0/26` | **Optional CNF profile only.** One telco LAN each (OAM + AUSF-UDM + HSS-HLR); each worker gets a dedicated NIC per LAN. See [`cnf-telco-profile.md`](./cnf-telco-profile.md). |
 
-The OpenShift control plane is fixed at **3 control-plane nodes**. The worker pool starts at **2 workers** and can scale to **N workers** as workload needs grow. When `enable_sriov_worker=true`, Terraform can add one optional host-device / SR-IOV-style worker with a dedicated accelerated NIC; see the [data-path contrast](#data-path-contrast-default-cni-vs-macvlan-vs-host-device) for how pods use that NIC. When `CNF_PROFILE=true`, each worker additionally gets one NIC per CNF LAN (OAM/AUSF-UDM/HSS-HLR) with Accelerated Networking and the worker SKU bumps to a 4-NIC size (`D8s_v5`); the demo Multus NIC is dropped. See [`cnf-telco-profile.md`](./cnf-telco-profile.md).
+The OpenShift control plane is fixed at **3 control-plane nodes**. The worker pool starts at **2 workers** and can scale to **N workers** as workload needs grow. When `ENABLE_SRIOV=true` (`enable_sriov` in tfvars), Terraform can add one optional host-device / SR-IOV-style worker with a dedicated accelerated NIC and the `snet-ocp-sriov` subnet; both are off by default and independent of `CNF_PROFILE`. See the [data-path contrast](#data-path-contrast-default-cni-vs-macvlan-vs-host-device) for how pods use that NIC. When `CNF_PROFILE=true`, each worker additionally gets one NIC per CNF LAN (OAM/AUSF-UDM/HSS-HLR) with Accelerated Networking and the worker SKU bumps to a 4-NIC size (`D8s_v5`); the demo Multus NIC is dropped. See [`cnf-telco-profile.md`](./cnf-telco-profile.md).
 
 ## Terraform stages
 
@@ -59,7 +59,7 @@ The OpenShift control plane is fixed at **3 control-plane nodes**. The worker po
 | `02-image` | RHCOS VHD import and Shared Image Gallery image version. |
 | `03-bootstrap` | Bootstrap VM using pointer ignition. |
 | `04-control-plane` | Control-plane VMs from generated master ignition. |
-| `05-workers` | Worker VMs from generated worker ignition, plus optional host-device validation worker. |
+| `05-workers` | Worker VMs from generated worker ignition, plus optional host-device validation worker (`ENABLE_SRIOV=true`). |
 
 ## Ignition flow
 

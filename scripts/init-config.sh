@@ -59,15 +59,24 @@ ask LOCATION                 "Azure region"                                     
 ask ARCHITECTURE             "Cluster CPU architecture (x86_64 or arm64)"         "x86_64"
 ask CLUSTER_SUBSCRIPTION_ID  "Subscription ID where the cluster is deployed"      ""
 ask DNS_SUBSCRIPTION_ID      "Subscription ID where the parent DNS zone lives"    "$CLUSTER_SUBSCRIPTION_ID"
-ask PARENT_DNS_ZONE          "Parent public DNS zone (e.g. example.com)"          ""
-ask PARENT_DNS_RESOURCE_GROUP "Resource group of the parent DNS zone"             ""
-ask BASE_DOMAIN              "Cluster sub-zone (e.g. ocp.\$PARENT_DNS_ZONE)"      "ocp.$PARENT_DNS_ZONE"
+
+# Public DNS is opt-in. Default false = internal-only (the cluster's api /
+# *.apps records live in the private DNS zone only). See docs/dns-internal-only.md.
+ask CREATE_PUBLIC_DNS        "Create a public DNS sub-zone + NS delegation? (true/false)" "false"
+if [[ "$CREATE_PUBLIC_DNS" == "true" ]]; then
+  ask PARENT_DNS_ZONE           "Parent public DNS zone (e.g. example.com)"         ""
+  ask PARENT_DNS_RESOURCE_GROUP "Resource group of the parent DNS zone"             ""
+else
+  PARENT_DNS_ZONE=""
+  PARENT_DNS_RESOURCE_GROUP=""
+fi
+ask BASE_DOMAIN              "Cluster base domain (e.g. ocp.example.com)"          "ocp.${PARENT_DNS_ZONE:-example.com}"
 ask WORKLOAD_RESOURCE_GROUP  "Cluster workload resource group (will be created)"  "rg-${CLUSTER_NAME}-ocp"
 ask NETWORK_RESOURCE_GROUP   "Resource group containing the cluster VNet"         "rg-${CLUSTER_NAME}-net"
 ask VIRTUAL_NETWORK          "VNet name (must already exist)"                     "vnet-${CLUSTER_NAME}-ocp"
 ask MACHINE_NETWORK_CIDR     "Spoke VNet machine CIDR (covers all OS subnets)"    "10.20.0.0/22"
 ask ADMIN_SSH_SOURCE_IP      "Admin SSH source CIDR (your workstation /32)"       ""
-ask DNS_RESOURCE_GROUP       "Resource group of the parent DNS zone (legacy)"     "$PARENT_DNS_RESOURCE_GROUP"
+ask DNS_RESOURCE_GROUP       "RG for baseDomainResourceGroupName (Azure installer needs this even for internal; see docs/dns-internal-only.md)" "$PARENT_DNS_RESOURCE_GROUP"
 ask HUB_DNS_RESOURCE_GROUP   "RG holding privatelink.blob.core.windows.net zone"  "$NETWORK_RESOURCE_GROUP"
 
 if [[ -z "$ADMIN_SSH_SOURCE_IP" ]]; then
@@ -107,6 +116,9 @@ NETWORK_RESOURCE_GROUP=$NETWORK_RESOURCE_GROUP
 WORKLOAD_RESOURCE_GROUP=$WORKLOAD_RESOURCE_GROUP
 VIRTUAL_NETWORK=$VIRTUAL_NETWORK
 
+# Public DNS is opt-in (default false = internal-only). PARENT_DNS_* are only
+# used when CREATE_PUBLIC_DNS=true. See docs/dns-internal-only.md.
+CREATE_PUBLIC_DNS=$CREATE_PUBLIC_DNS
 PARENT_DNS_ZONE=$PARENT_DNS_ZONE
 PARENT_DNS_RESOURCE_GROUP=$PARENT_DNS_RESOURCE_GROUP
 HUB_DNS_RESOURCE_GROUP=$HUB_DNS_RESOURCE_GROUP
@@ -123,8 +135,12 @@ COMPUTE_SUBNET=snet-ocp-worker
 SUBNET_MASTER_CIDR=10.20.1.0/28
 SUBNET_WORKER_CIDR=10.20.1.16/28
 SUBNET_BOOTSTRAP_CIDR=10.20.1.32/28
-SUBNET_MULTUS_CIDR=10.20.2.0/24
-SUBNET_SRIOV_CIDR=10.20.3.0/24
+SUBNET_MULTUS_CIDR=10.20.2.0/23
+
+# SR-IOV demo worker is opt-in (default off); see docs/multus-validation.md.
+# SUBNET_SRIOV_CIDR default sits clear of the Multus /23 (must not overlap).
+ENABLE_SRIOV=false
+SUBNET_SRIOV_CIDR=10.20.7.0/24
 
 MACHINE_NETWORK_CIDR=$MACHINE_NETWORK_CIDR
 CLUSTER_NETWORK_CIDR=10.128.0.0/14

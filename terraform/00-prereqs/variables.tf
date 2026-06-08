@@ -53,6 +53,24 @@ variable "use_legacy_dns_layout" {
   default     = false
 }
 
+# When false (default), the repo provisions NO public DNS: it does not look
+# up the parent public zone, create the public child sub-zone, or write the
+# NS delegation record. This is the internal-only posture — the cluster's
+# api / api-int / *.apps records are served by the Azure PRIVATE DNS zone
+# (azurerm_private_dns_zone.cluster) which is VNet-linked and never public.
+#
+# Set to true only when you actually want a delegated public sub-zone for the
+# OpenShift base domain (e.g. an externally reachable cluster, or to satisfy
+# an OpenShift Azure installer that validates a public base-domain zone for
+# baseDomainResourceGroupName). When true, parent_dns_zone /
+# parent_dns_resource_group / dns_subscription_id must point at a real parent
+# public zone you control. See docs/dns-internal-only.md.
+variable "create_public_dns" {
+  description = "When true, create the public child sub-zone and NS delegation in the parent public DNS zone. Default false = internal-only (private DNS zone only)."
+  type        = bool
+  default     = false
+}
+
 variable "parent_dns_zone" {
   type    = string
   default = "example.com"

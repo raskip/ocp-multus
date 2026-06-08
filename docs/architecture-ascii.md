@@ -12,8 +12,8 @@ Existing Azure VNet
   +-- snet-ocp-master       control plane + API internal LB
   +-- snet-ocp-worker       worker primary NICs + ingress internal LB
   +-- snet-ocp-bootstrap    bootstrap VM + uploader VM
-  +-- snet-ocp-multus       worker secondary NICs for macvlan demo
-  +-- snet-ocp-sriov        optional dedicated accelerated NIC
+  +-- snet-ocp-multus       10.20.2.0/23 worker secondary NICs for macvlan demo
+  +-- snet-ocp-sriov        10.20.7.0/24 opt-in (ENABLE_SRIOV=true) accelerated NIC
   +-- snet-ocp-oam          optional CNF profile: OAM LAN NIC per worker
   +-- snet-ocp-ausfudm      optional CNF profile: AUSF-UDM external LAN
   +-- snet-ocp-hsshlr       optional CNF profile: HSS-HLR external LAN
@@ -30,7 +30,7 @@ OpenShift resource group
   +-- bootstrap VM
   +-- 3 control-plane VMs
   +-- worker VMs
-  +-- optional host-device validation worker
+  +-- optional host-device validation worker (ENABLE_SRIOV=true)
 ```
 
 Terraform creates Azure infrastructure. `openshift-install` creates OpenShift manifests and ignition configs. Machine API manifests are removed before ignition generation because Terraform creates the Azure VMs.
@@ -38,11 +38,11 @@ Terraform creates Azure infrastructure. `openshift-install` creates OpenShift ma
 ## OpenShift cluster view (pods, NADs, nodes)
 
 ```text
-Worker node
+Optional SR-IOV demo worker (ENABLE_SRIOV=true)
   |
   +-- eth0  primary NIC      pod CIDR (OVN-Kubernetes)
-  +-- eth1  secondary NIC    Multus subnet  (parent for macvlan)
-  +-- eth2  optional NIC     Accelerated Networking
+  +-- eth1  secondary NIC    Multus subnet 10.20.2.0/23 (parent for macvlan)
+  +-- eth2  optional NIC     SR-IOV subnet 10.20.7.0/24
                              (moved into one pod via host-device CNI)
 
 Default-network pod

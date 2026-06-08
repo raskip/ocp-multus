@@ -64,6 +64,10 @@ TPL="$(cat "$TMPL")"
 TPL="${TPL//__BASE_DOMAIN__/$BASE_DOMAIN}"
 TPL="${TPL//__CLUSTER_NAME__/$CLUSTER_NAME}"
 TPL="${TPL//__LOCATION__/$LOCATION}"
+# baseDomainResourceGroupName: the Azure platform schema requires this field
+# even for publish: Internal. It still points at DNS_RESOURCE_GROUP regardless
+# of CREATE_PUBLIC_DNS — for internal-only installs this is only used to
+# satisfy installer validation. See docs/dns-internal-only.md.
 TPL="${TPL//__DNS_RESOURCE_GROUP__/$DNS_RESOURCE_GROUP}"
 TPL="${TPL//__NETWORK_RESOURCE_GROUP__/$NETWORK_RESOURCE_GROUP}"
 TPL="${TPL//__WORKLOAD_RESOURCE_GROUP__/$WORKLOAD_RESOURCE_GROUP}"

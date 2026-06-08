@@ -28,7 +28,7 @@ Default (`--graceful`):
 6. `oc debug node/<n> -- chroot /host shutdown -h <--shutdown-delay-min>` on every node (workers first, then masters; deterministic last master).
 7. Poll Azure until all cluster VMs are `stopped` / `deallocated`, up to `--timeout` minutes (default `OPERATIONS_TIMEOUT_MIN`, default 30).
 8. **Refuse to deallocate** if step 7 timed out — unless `--force-deallocate-after-timeout`.
-9. `az vm deallocate --no-wait` on every cluster VM (masters + workers + SR-IOV worker; bootstrap excluded).
+9. `az vm deallocate --no-wait` on every cluster VM (masters + workers, plus the SR-IOV worker when present / `ENABLE_SRIOV=true`; bootstrap excluded).
 
 `--fast` skips 1, 4–7. It confirms first, optionally backs up etcd, then goes
 straight to `az vm deallocate`. Suitable for an idle cluster where you accept
@@ -56,7 +56,7 @@ Loaded from `config/cluster.env`:
 - `CLUSTER_NAME` — used to match VM names.
 - `WORKLOAD_RESOURCE_GROUP` — resource group scanned for cluster VMs.
 - `CLUSTER_SUBSCRIPTION_ID` — optional `az account set` target.
-- `CONTROL_PLANE_VM_PREFIX`, `WORKER_VM_PREFIX`, `SRIOV_WORKER_VM_NAME` — VM naming pattern (defaults match Terraform).
+- `CONTROL_PLANE_VM_PREFIX`, `WORKER_VM_PREFIX`, `SRIOV_WORKER_VM_NAME` — VM naming pattern (defaults match Terraform; SR-IOV name used only when present / `ENABLE_SRIOV=true`).
 - `BACKUP_DIR` — where etcd backup tarballs land (default `backups`).
 - `OPERATIONS_TIMEOUT_MIN` — default wait timeout (default 30).
 - `ASSUME_YES` — set to `1` to skip the confirm prompt non-interactively.

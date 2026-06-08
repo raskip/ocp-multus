@@ -3,6 +3,11 @@ dns_subscription_id           = "11111111-1111-1111-1111-111111111111"
 location                      = "northeurope"
 cluster_name                  = "lab"
 base_domain                   = "ocp.example.com"
+
+# Public DNS is opt-in. false (default) = internal-only: no public sub-zone and
+# no NS delegation are created; parent_dns_zone / parent_dns_resource_group are
+# ignored. Set true to delegate a public sub-zone. See docs/dns-internal-only.md.
+create_public_dns             = false
 parent_dns_zone               = "example.com"
 parent_dns_resource_group     = "rg-dns-public-example"
 workload_resource_group_name  = "rg-ocp-lab"

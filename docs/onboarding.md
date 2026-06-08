@@ -9,8 +9,8 @@ mechanics, skip to **Phase 2** and follow `make preflight && make all`,
 or read [`quickstart.md`](./quickstart.md) for the condensed flow.
 
 > **Phase Pre-0 — Procurement (do this first).** Before any of the
-> decisions below, gather the credentials, quota, DNS delegation, and
-> firewall allowlist your tenant needs. See
+> decisions below, gather the credentials, quota, optional public DNS
+> delegation, and firewall allowlist your tenant needs. See
 > [`pre-install-checklist.md`](./pre-install-checklist.md) — single page
 > you can forward to your DNS / network / Entra / subscription teams
 > in parallel. It also maps each install phase to the access and team
@@ -177,8 +177,9 @@ wired correctly end-to-end with two demos:
   secondary NIC (`snet-ocp-multus` subnet), assigns pod IPs via
   Whereabouts IPAM, and runs a two-NIC verification pod.
 - **host-device / SR-IOV-style** — moves a dedicated NIC into a pod
-  network namespace on the optional SR-IOV-style worker (when
-  `enable_sriov_worker=true`).
+  network namespace on the optional SR-IOV-style worker. SR-IOV is
+  opt-in (`ENABLE_SRIOV=true`); off by default the SR-IOV demo worker
+  and its subnet are not created.
 
 Both demos require the **`privileged` SCC** and a namespace with the
 `privileged` PodSecurity profile (required for the macvlan / host-device

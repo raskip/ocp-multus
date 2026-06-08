@@ -2,8 +2,14 @@
 # DNS: create public sub-zone and delegate from parent zone
 #-----------------------------------------------------------------------------
 
+# Public DNS is opt-in. When var.create_public_dns is false (default), none
+# of these resources are created and the install is internal-only — the
+# cluster's api / api-int / *.apps records live solely in the private DNS
+# zone below. See docs/dns-internal-only.md.
+
 # Reference the existing parent public DNS zone owned by the customer.
 data "azurerm_dns_zone" "parent" {
+  count               = var.create_public_dns ? 1 : 0
   provider            = azurerm.dns
   name                = var.parent_dns_zone
   resource_group_name = var.parent_dns_resource_group
@@ -11,6 +17,7 @@ data "azurerm_dns_zone" "parent" {
 
 # New public sub-zone in the same resource group as the parent.
 resource "azurerm_dns_zone" "public_subzone" {
+  count               = var.create_public_dns ? 1 : 0
   provider            = azurerm.dns
   name                = var.base_domain
   resource_group_name = var.parent_dns_resource_group
@@ -19,12 +26,13 @@ resource "azurerm_dns_zone" "public_subzone" {
 
 # NS delegation record in the parent zone for the OpenShift base domain.
 resource "azurerm_dns_ns_record" "delegation" {
+  count               = var.create_public_dns ? 1 : 0
   provider            = azurerm.dns
   name                = trimsuffix(trimsuffix(var.base_domain, var.parent_dns_zone), ".")
-  zone_name           = data.azurerm_dns_zone.parent.name
+  zone_name           = data.azurerm_dns_zone.parent[0].name
   resource_group_name = var.parent_dns_resource_group
   ttl                 = 3600
-  records             = azurerm_dns_zone.public_subzone.name_servers
+  records             = azurerm_dns_zone.public_subzone[0].name_servers
   tags                = var.tags
 
   lifecycle {

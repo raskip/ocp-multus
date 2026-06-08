@@ -1,6 +1,6 @@
 # Accessing the cluster
 
-This repo deploys an internal OpenShift topology by default (`publish: Internal`). The cluster API, console, and application routes are reachable only from networks that can route to the Azure VNet and resolve the cluster private DNS zone.
+This repo deploys an internal OpenShift topology by default (`publish: Internal`). The cluster API, console, and application routes are reachable only from networks that can route to the Azure VNet and resolve the cluster private DNS zone. By default the repo creates **no public DNS** — resolution is served entirely by the private DNS zone. See [`dns-internal-only.md`](./dns-internal-only.md).
 
 ## Endpoints
 
@@ -44,7 +44,7 @@ Azure Bastion Developer SKU can also be an option for portal-based RDP/SSH in su
 
 - Normal pod-to-pod and service traffic uses OpenShift networking and Kubernetes `ClusterIP` Services.
 - HTTP/S application traffic uses OpenShift Routes through the internal `*.apps` ingress load balancer.
-- Multus validation pods can also receive secondary-interface IPs from the Multus or host-device / SR-IOV-style subnets.
+- Multus validation pods can also receive secondary-interface IPs from the Multus subnet or, when `ENABLE_SRIOV=true`, the host-device / SR-IOV-style subnet.
 
 For the packet-path differences, see [`architecture.md` → Data-path contrast](./architecture.md#data-path-contrast-default-cni-vs-macvlan-vs-host-device).
 

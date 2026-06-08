@@ -27,7 +27,7 @@ Runnable example scripts are in
 | 4 | Subnet `snet-ocp-worker` | yes | NSG attached. Route table attached (egress). |
 | 5 | Subnet `snet-ocp-bootstrap` | yes | NSG attached. Route table attached (egress). |
 | 6 | Subnet `snet-ocp-multus` | optional | Only needed if Multus secondary NICs are used. NSG attached. |
-| 7 | Subnet `snet-ocp-sriov` | optional | Only needed if SR-IOV / host-device CNI is used. NSG attached. |
+| 7 | Subnet `snet-ocp-sriov` | optional | Only needed when SR-IOV / host-device CNI is opted in (`ENABLE_SRIOV=true`). NSG attached. |
 | 7a–c | Subnets `snet-ocp-oam`, `snet-ocp-ausfudm`, `snet-ocp-hsshlr` | optional | Only with the CNF profile (`CNF_PROFILE=true`): one dedicated worker NIC per telco LAN. NSG attached; route table only if the external LANs need firewall egress. See [`cnf-telco-profile.md`](./cnf-telco-profile.md). |
 | 8 | NSG for master subnet | yes | Section 3. |
 | 9 | NSG for worker subnet | yes | Section 3. |
@@ -64,15 +64,17 @@ The cluster installer creates:
 | `snet-ocp-master` | /28 (16 IP) | **/27 (32 IP)** | 3 master VMs + ILB frontends + storage PE; count stays fixed at 3 masters |
 | `snet-ocp-bootstrap` | /29 (8 IP) | **/28 (16 IP)** | 1 bootstrap VM (transient) + uploader VM + optional Windows jump VM (`CREATE_WINDOWS_JUMP=true`) + optional Linux bastion (`CREATE_LINUX_BASTION=true`) |
 | `snet-ocp-worker` | /28 (16 IP) | **/24 (256 IP)** | 2–N worker VMs + ingress ILB frontend; grows with workload |
-| `snet-ocp-multus` | /25 (128 IP) | **/24 (256 IP)** | Pod IPs for whereabouts IPAM on macvlan / bridge NADs |
-| `snet-ocp-sriov` | /28 (16 IP) | **/27 (32 IP)** | One VF IP per worker per host-device NIC + a few reserves |
+| `snet-ocp-multus` | /23 (512 IP) | **/23 (512 IP)** | Default Multus range (`10.20.2.0/23`): lower `/24` reserved for Azure-assigned worker NIC IPs, upper `/24` for pod IPAM |
+| `snet-ocp-sriov` | /28 (16 IP) | **/24 (256 IP)** | Opt-in only (`ENABLE_SRIOV=true`): default relocated to `10.20.7.0/24` for the demo worker host-device NIC + reserves |
 | `snet-ocp-oam` | /28 (16 IP) | **/28 (16 IP)** | CNF profile only: OAM LAN, one NIC per worker |
 | `snet-ocp-ausfudm` | /26 (64 IP) | **/26 (64 IP)** | CNF profile only: AUSF-UDM external LAN |
 | `snet-ocp-hsshlr` | /26 (64 IP) | **/26 (64 IP)** | CNF profile only: HSS-HLR external LAN |
 
-A `/22` VNet (1024 addresses) leaves room for all five base subnets at the
-recommended sizes plus growth. The optional CNF profile adds three more LAN
-subnets — size the VNet accordingly (a `/21` is comfortable). See
+A `/21` VNet such as `10.20.0.0/21` is the comfortable baseline now that
+the default Multus subnet is `/23` and the optional SR-IOV (`10.20.7.x`)
+and CNF LAN (`10.20.4.x`–`10.20.6.x`) ranges need room. A `/22` still
+fits the common default case with no SR-IOV and no CNF profile because
+`10.20.2.0/23` remains inside the lower `/22` of that address space. See
 [`cnf-telco-profile.md`](./cnf-telco-profile.md).
 
 ---
@@ -106,7 +108,7 @@ from the internet"). Tighten as your tenant requires.
 | 5 | `VirtualNetwork` | * | 30000–32767 | TCP | Allow | NodePort (if used) |
 | 6 | `AzureLoadBalancer` | * | * | * | Allow | LB health probes |
 
-Bootstrap, multus, and sriov subnets can reuse the worker NSG or
+Bootstrap, multus, and the opt-in sriov subnet can reuse the worker NSG or
 have minimal NSGs of their own.
 
 The cluster's outbound side is governed by the route table (section 4)
@@ -152,10 +154,10 @@ Grant the install/runtime identity only these network permissions:
 
 | Scope | Minimum grant | Why |
 |---|---|---|
-| Each OCP subnet (`master`, `worker`, `bootstrap`, `multus`, `sriov`; plus `oam`, `ausfudm`, `hsshlr` with the CNF profile) | Custom role with `Microsoft.Network/virtualNetworks/subnets/read` and `Microsoft.Network/virtualNetworks/subnets/join/action` | Lets VM NICs, internal load balancer frontends, and the storage Private Endpoint attach to the existing subnets. |
+| Each OCP subnet (`master`, `worker`, `bootstrap`, `multus`; plus `sriov` when `ENABLE_SRIOV=true`; plus `oam`, `ausfudm`, `hsshlr` with the CNF profile) | Custom role with `Microsoft.Network/virtualNetworks/subnets/read` and `Microsoft.Network/virtualNetworks/subnets/join/action` | Lets VM NICs, internal load balancer frontends, and the storage Private Endpoint attach to the existing subnets. |
 | Cluster route table | Built-in **Network Contributor scoped to the route table only**, or a custom route-writer role | OpenShift's Azure cloud-provider creates/updates/deletes per-node routes. |
 | Workload resource group | **Contributor** | Terraform and the cluster runtime create VMs, NICs, disks, load balancers, public IPs if enabled, storage, and Private Endpoint resources there. |
-| Public / private DNS zones | DNS-scoped roles only | Public child-zone delegation and Private Endpoint DNS A-record creation. |
+| Public / private DNS zones | DNS-scoped roles only | Public child-zone delegation (only when `CREATE_PUBLIC_DNS=true`) and Private Endpoint DNS A-record creation. |
 
 The strict custom route-writer role needs these Azure actions:
 
@@ -177,8 +179,9 @@ create or modify network resources:
 
 Customer hand-off sentence:
 
-> Provide the five subnet resource IDs and the route table resource ID.
-> Grant the installer SP subnet read/join on those five subnets and
+> Provide the required subnet resource IDs (plus `snet-ocp-sriov` when
+> `ENABLE_SRIOV=true`) and the route table resource ID.
+> Grant the installer SP subnet read/join on those subnets and
 > route update rights on that route table. No VNet Contributor is
 > required if subnet/NSG/UDR associations are pre-provisioned.
 
@@ -188,12 +191,14 @@ Customer hand-off sentence:
 
 - **Parent zone** (e.g. `example.com`, or a sub-zone delegated to your
   team): pre-exists in Azure DNS.
-- **Public child zone** (e.g. `ocp.example.com`): created by Terraform
-  in the DNS resource group, then delegated from the parent zone with an
-  `NS` record. The installer's identity needs `DNS Zone Contributor` (or
-  equivalent) on the DNS resource group that contains the parent zone and
-  receives this child zone. Parent-zone-only scope is not enough for the
-  default Terraform path.
+- **Public child zone** (e.g. `ocp.example.com`): **optional, off by
+  default** (`CREATE_PUBLIC_DNS=true`). When enabled, it is created by
+  Terraform in the DNS resource group, then delegated from the parent
+  zone with an `NS` record, and the installer's identity needs
+  `DNS Zone Contributor` (or equivalent) on the DNS resource group that
+  contains the parent zone and receives this child zone (parent-zone-only
+  scope is not enough). Internal-only installs skip this entirely — see
+  [`dns-internal-only.md`](./dns-internal-only.md).
 - **Cluster private zone** (e.g. `lab.ocp.example.com`): created by
   Terraform in the workload RG. The network stack writes the static
   `api` and `api-int` records; the ingress operator writes `*.apps`
@@ -265,7 +270,7 @@ See [`preflight-checklist.md`](./preflight-checklist.md).
 
 Once the resources exist, give the cluster install team:
 
-- The full Resource IDs of the five subnets
+- The full Resource IDs of the required subnets, plus `snet-ocp-sriov` when `ENABLE_SRIOV=true`
 - The full Resource ID of the route table
 - VNet name + RG (for the data-lookup)
 - Workload RG name (where cluster VMs will land — can be the same as
@@ -286,7 +291,8 @@ subnet_master_id    = "/subscriptions/.../snet-ocp-master"
 subnet_worker_id    = "/subscriptions/.../snet-ocp-worker"
 subnet_bootstrap_id = "/subscriptions/.../snet-ocp-bootstrap"
 subnet_multus_id    = "/subscriptions/.../snet-ocp-multus"
-subnet_sriov_id     = "/subscriptions/.../snet-ocp-sriov"
+# SR-IOV only (enable_sriov = true):
+# subnet_sriov_id   = "/subscriptions/.../snet-ocp-sriov"
 # CNF profile only (enable_cnf_lans = true):
 # subnet_oam_id      = "/subscriptions/.../snet-ocp-oam"
 # subnet_ausfudm_id  = "/subscriptions/.../snet-ocp-ausfudm"

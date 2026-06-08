@@ -16,7 +16,7 @@ networks, node tuning, storage classes, and an optional bastion.
 
 | Area | Off (default) | On (`CNF_PROFILE=true`) |
 |------|---------------|--------------------------|
-| Subnets | master/worker/bootstrap/multus/sriov | + `snet-ocp-oam` (/28), `snet-ocp-ausfudm` (/26), `snet-ocp-hsshlr` (/26) |
+| Subnets | master/worker/bootstrap/multus; SR-IOV only with `ENABLE_SRIOV=true` | + `snet-ocp-oam` (/28), `snet-ocp-ausfudm` (/26), `snet-ocp-hsshlr` (/26) |
 | Worker NICs | primary + demo multus (2 NICs) | primary + OAM + AUSF-UDM + HSS-HLR (4 NICs); demo multus NIC dropped |
 | Accelerated Networking | off | on (primary + LAN NICs) — accelerates TCP/UDP, **not SCTP** |
 | Worker SKU | `D4s_v5` (2 NIC slots) | `D8s_v5` (4 NIC slots) |
