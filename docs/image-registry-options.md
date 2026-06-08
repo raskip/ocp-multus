@@ -207,7 +207,8 @@ use Option A. Instead:
 1. Install with `AUTO_IMAGE_REGISTRY_REMOVED=false` (set in
    `config/cluster.cnf.example.env`) so `wait-install` leaves the registry alone.
 2. Run `scripts/configure-image-registry-managed.sh` to apply Option B (or set
-   `ACCOUNT_NAME`/`CONTAINER_NAME` for the Option C pre-created account).
+   `ACCOUNT_NAME`/`CONTAINER_NAME` for the Option C pre-created account). The
+   `make cnf-apply` sequence runs this as its final step.
 
 If an external registry (Quay / ACR) is acceptable to the CNF vendor, that is
 simpler than running the in-cluster registry — confirm during the workshop.

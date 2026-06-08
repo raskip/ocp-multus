@@ -8,6 +8,8 @@ This sets up the dedicated CNF worker pool that the node-tuning
 ([`../node-tuning/`](../node-tuning/)) and workload ([`../cnf/`](../cnf/))
 manifests depend on.
 
+Applied automatically by `make cnf-apply`; see [`docs/cnf-telco-profile.md`](../../docs/cnf-telco-profile.md). You can still apply manually as below.
+
 | File | Purpose |
 |------|---------|
 | `00-machineconfigpool-appworker.yaml` | `appworker` MachineConfigPool; tuning MachineConfigs land only here. |

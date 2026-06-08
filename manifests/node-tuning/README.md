@@ -10,6 +10,8 @@ All tuning here targets the **`appworker`** MachineConfigPool defined in
 [`../cnf-platform/00-machineconfigpool-appworker.yaml`](../cnf-platform/00-machineconfigpool-appworker.yaml),
 so the base demo workers and control plane are never touched.
 
+Applied automatically by `make cnf-apply`; see [`docs/cnf-telco-profile.md`](../../docs/cnf-telco-profile.md). You can still apply manually as below.
+
 | File | What it does | Reboot |
 |------|--------------|--------|
 | `99-appworker-load-sctp.yaml` | Loads the `sctp` kernel module (signalling transport for AUSF/UDM, HSS/HLR). | yes |

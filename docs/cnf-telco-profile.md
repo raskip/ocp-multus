@@ -9,8 +9,30 @@ networks, node tuning, storage classes, and an optional bastion.
 
 > **Several manifests ship as templates with `TODO(vendor)` placeholders.** The
 > Terraform spine (subnets + worker NICs) builds against placeholder CIDRs now;
-> the workload/tuning manifests need the vendor's exact values before they route
-> and tune correctly. See the per-directory READMEs.
+> the workload/tuning manifests need the CNF vendor's exact values before they
+> route and tune correctly. See the per-directory READMEs.
+
+## What you need to provide (prerequisites)
+
+Before enabling `CNF_PROFILE=true`, confirm these inputs with your network,
+storage, platform, and CNF vendor teams:
+
+- **A correctly sized and hub-peered VNet.** A `/21` is the comfortable baseline
+  for the base cluster, default Multus, optional SR-IOV, and the three CNF LANs;
+  see [`network-prereqs.md`](./network-prereqs.md#2-subnet-sizing) and the
+  [VNet peering guidance](./network-prereqs.md#6-vnet-peering).
+- **The three LAN CIDRs** for OAM, AUSF-UDM, and HSS-HLR. These become
+  `snet-ocp-oam`, `snet-ocp-ausfudm`, and `snet-ocp-hsshlr`.
+- **The CNF vendor network values** listed in
+  [Vendor values to confirm before `make cnf-apply`](#vendor-values-to-confirm-before-make-cnf-apply).
+- **A storage decision** for RWX: Azure Files or Azure NetApp Files. RWO uses
+  Azure Disk; see [Components](#components) for the storage manifests.
+- **A registry decision:** in-cluster ImageStream support via the managed image
+  registry, or an external enterprise registry such as ACR.
+- **Firewall egress** from the worker external LANs to the CNF peers and services
+  that the vendor requires.
+- **MTU and throughput on the path:** target a consistent 1500 MTU end-to-end and
+  validate approximately 400 MB/s on the relevant CNF data path. See [MTU](#mtu).
 
 ## What it adds
 
@@ -23,46 +45,91 @@ networks, node tuning, storage classes, and an optional bastion.
 | Image registry | Removed | Managed (ImageStreams) |
 | Extras | — | optional Linux bastion; RWO/RWX StorageClasses; node tuning; CNF pool/SCC |
 
-## Prerequisites — values to get from the CNF vendor
+## Enable + deploy (easy path)
 
-ipvlan mode (l2/l3/l3s) + IPAM/gateways/static routes per LAN; exact kernel
-params + sysctls (CNI allowlist + unsafe) + THP policy; required pod
-capabilities + PriorityClass; LAN + external CIDRs/ports; whether 400 MB/s is
-per-worker and TCP/UDP vs SCTP; RWX = Azure Files (SMB/NFS) vs ANF; whether the
-in-cluster registry is mandatory or external Quay/ACR is acceptable. (See the
-workshop questions in the session deliverables.)
+The profile is opt-in and remains off unless `CNF_PROFILE=true` is set.
 
-## Enable + deploy
-
-1. Merge the preset into your config:
+1. Enable the profile and deploy the Azure infrastructure with the normal runbook:
 
    ```bash
-   cat config/cluster.cnf.example.env >> config/cluster.env
-   # then edit config/cluster.env: set the real LAN CIDRs.
+   # in config/cluster.env
+   CNF_PROFILE=true
+
+   make all
    ```
 
-2. Render tfvars and apply the infra (same flow as the base runbook):
+   This automates the three LAN subnets, per-LAN worker NICs, Accelerated
+   Networking, the D8s_v5 worker size, and the optional Linux bastion when its
+   toggle is enabled.
+
+2. Run the read-only preflight before changing cluster objects:
 
    ```bash
-   make tfvars              # scripts/render-tfvars-from-env.sh
-   make network            # 01-network: creates the 3 CNF LAN subnets
-   # ... base install (image/bootstrap/control-plane) ...
-   make workers            # 05-workers: 4 NICs/worker on D8s_v5 with AN
-   AUTO_IMAGE_REGISTRY_REMOVED=false make wait-install
+   make cnf-preflight
    ```
 
-3. Post-install, apply the platform → tuning → workloads → storage manifests:
+   The preflight checks that `oc` is logged in, `CNF_PROFILE=true` is set,
+   appworkers have four NICs, the three CNF subnets exist, manifests are present,
+   and the vendor placeholders have been reviewed.
+
+3. Fill the [vendor checklist](#vendor-values-to-confirm-before-make-cnf-apply),
+   then apply the post-install profile:
 
    ```bash
-   oc apply -f manifests/cnf/00-namespace.yaml
-   oc apply -f manifests/cnf-platform/          # pool, SA, scoped SCC, PriorityClass
-   scripts/label-cnf-nodes.sh vm-worker-0-<cluster> vm-worker-1-<cluster>
-   oc get mcp appworker -w                       # wait for the pool to converge
-   oc apply -f manifests/node-tuning/            # SCTP/THP/sysctls (TODO(vendor))
-   oc apply -f manifests/cnf/                     # ipvlan NADs + example pod (TODO(vendor))
-   oc apply -f manifests/storage/                # RWO + RWX StorageClasses
-   scripts/configure-image-registry-managed.sh   # registry -> Managed
+   make cnf-apply
    ```
+
+   By default this prints a summary, reminds you to confirm the vendor values,
+   and asks for interactive confirmation before applying.
+
+4. Verify the finished profile:
+
+   ```bash
+   make cnf-verify
+   ```
+
+   Verification is read-only. It checks that the `appworker` MCP is converged,
+   nodes are labeled with four NICs in the expected order
+   (`eth0` primary, `eth1` OAM, `eth2` AUSF-UDM, `eth3` HSS-HLR), the three
+   ipvlan NADs exist, RWO/RWX StorageClasses exist, and the image registry is
+   `Managed`.
+
+## Safety flags for CNF make targets
+
+- `CNF_YES=1 make cnf-apply` skips the interactive confirmation prompt.
+- `DRY_RUN=1 make cnf-apply` previews the planned post-install sequence without
+  applying resources.
+- `CNF_NODES="node-a node-b" make cnf-apply` overrides automatic worker-node
+  detection for the node-labeling step.
+
+## Vendor values to confirm before `make cnf-apply`
+
+Confirm every `TODO(vendor)` value before running `make cnf-apply`; otherwise the
+manifests may apply but the CNF may not route, schedule, or tune correctly.
+
+- **ipvlan mode per LAN:** `l2`, `l3`, or `l3s` for OAM, AUSF-UDM, and HSS-HLR.
+- **IPAM per LAN:** range, gateway, and allocation method for each LAN. Ensure
+  pod IP ranges do not overlap Azure-assigned NIC IPs.
+- **Static routes per LAN:** required routes for OAM, AUSF-UDM, and HSS-HLR to
+  reach CNF peers and external services.
+- **Master NIC mapping per LAN:** default mapping is `eth1`=OAM,
+  `eth2`=AUSF-UDM, `eth3`=HSS-HLR; verify actual ordering before go-live. See
+  [NIC ordering (gotcha)](#nic-ordering-gotcha).
+- **Kernel parameters and sysctls:** additional kernel args, the
+  `cni-sysctl-allowlist` entries to merge with cluster defaults, and the
+  `allowedUnsafeSysctls` list for the `appworker` pool.
+- **THP policy:** confirm whether `madvise` is correct or whether the CNF vendor
+  requires a different Transparent Huge Pages setting.
+- **Pod security and scheduling:** required Linux capabilities, any host access or
+  host ports, and the required PriorityClass value/preemption policy.
+- **LAN and external firewall policy:** LAN CIDRs, external peer CIDRs, protocols,
+  and ports that must be reachable from the worker external LANs.
+- **RWX backend:** Azure Files or Azure NetApp Files, including protocol,
+  capacity, throughput, private endpoint/delegated subnet needs, and whether one
+  StorageClass should be default.
+- **Registry requirement:** whether the in-cluster managed image registry and
+  ImageStreams are mandatory, or whether an external enterprise registry is
+  acceptable.
 
 ## Components
 
@@ -103,11 +170,37 @@ in the NADs.
 - Accelerated Networking cannot be toggled on a running NIC without VM
   deallocation — enable it at build time (the profile does).
 - Node-tuning MachineConfigs roll the `appworker` pool one node at a time.
+- Re-run `make cnf-preflight` before changing vendor values, then use
+  `DRY_RUN=1 make cnf-apply` to preview the resulting apply sequence.
 
-## TODO(vendor) — consolidated
+## Under the hood (what `cnf-apply` runs)
 
-Tracked per directory; the must-have answers are: ipvlan mode + IPAM + routes;
-kernel/sysctl/THP params; pod capabilities + PriorityClass; LAN + external
-CIDRs/ports; 400 MB/s per-what and TCP/UDP vs SCTP; RWX transport (Files SMB/NFS
-vs ANF) + whether public storage accounts are allowed; registry mandatory vs
-external.
+`make cnf-apply` wraps the formerly manual post-install sequence below. It uses
+`oc apply`, so it is safe to re-run after correcting inputs.
+
+```bash
+# 1. Namespace
+oc apply -f manifests/cnf/00-namespace.yaml
+
+# 2. CNF platform objects: appworker pool, ServiceAccount, scoped SCC, PriorityClass
+oc apply -f manifests/cnf-platform/
+
+# 3. Label appworker nodes. Auto-detected by default; override with CNF_NODES.
+scripts/label-cnf-nodes.sh
+# CNF_NODES="node-a node-b" scripts/label-cnf-nodes.sh
+
+# 4. Wait for the appworker MachineConfigPool to converge
+oc get mcp appworker -w
+
+# 5. Node tuning: SCTP, THP, sysctls (requires confirmed vendor values)
+oc apply -f manifests/node-tuning/
+
+# 6. CNF ipvlan NADs and example workload namespace assets
+oc apply -f manifests/cnf/
+
+# 7. StorageClasses: RWO + selected RWX backend
+oc apply -f manifests/storage/
+
+# 8. Keep the in-cluster image registry Managed for ImageStreams
+scripts/configure-image-registry-managed.sh
+```

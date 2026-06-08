@@ -22,7 +22,8 @@ export
         wait-bootstrap approve-csrs wait-install all all-yes _cost-prompt \
         etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
         workers-down workers-up cluster-status \
-        ingress-hostnetwork image-registry-removed install-hooks sanitize
+        ingress-hostnetwork image-registry-removed install-hooks sanitize \
+        cnf-preflight cnf-apply cnf-verify
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
@@ -230,6 +231,19 @@ workers-down:       ; bash scripts/cluster-scale-workers.sh down $(SCALE_FLAGS)
 workers-up:         ; bash scripts/cluster-scale-workers.sh up $(SCALE_FLAGS)
 cluster-status:     ; bash scripts/cluster-status.sh $(STATUS_FLAGS)
 save-credentials:   ; bash scripts/save-credentials.sh $(if $(strip $(CREDENTIALS_DIR)),--out "$(CREDENTIALS_DIR)",) $(CREDENTIALS_FLAGS)
+
+# ---- Optional CNF / telco profile (post-install in-cluster layer) ----
+# Enable the infra with CNF_PROFILE=true + `make all`, then apply the in-cluster
+# layer with these targets. Full guide + vendor checklist: docs/cnf-telco-profile.md.
+#   make cnf-preflight               read-only readiness checks
+#   make cnf-apply                   apply the manifest sequence (asks to confirm)
+#   make cnf-apply CNF_YES=1         skip the prompt (automation)
+#   make cnf-apply DRY_RUN=1         preview the sequence without applying
+#   make cnf-apply CNF_NODES="a b"   label specific worker nodes as appworker
+#   make cnf-verify                  read-only post-deploy validation
+cnf-preflight:      ; bash scripts/cnf-preflight.sh
+cnf-apply:          ; bash scripts/cnf-apply.sh
+cnf-verify:         ; bash scripts/cnf-verify.sh
 
 # ---- Post-install workarounds for restricted tenants (see docs/) ----
 # Patch the default IngressController to HostNetwork. Use when this repo's

@@ -11,6 +11,8 @@ attaches CNF pods to the three dedicated LAN subnets created by the
 `enable_cnf_lans` Terraform profile (see
 [`docs/cnf-telco-profile.md`](../../docs/cnf-telco-profile.md)).
 
+Applied automatically by `make cnf-apply`; see [`docs/cnf-telco-profile.md`](../../docs/cnf-telco-profile.md). You can still apply manually as below.
+
 ## Interface mapping (important)
 
 With `enable_cnf_lans = true`, each worker has **four** NICs and the demo

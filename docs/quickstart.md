@@ -21,7 +21,8 @@ install hints if anything is missing.
 
 > Deploying telco CNFs? The optional **CNF profile** (dedicated LAN NICs,
 > ipvlan, SCTP, node tuning, in-cluster registry) is in
-> [`cnf-telco-profile.md`](./cnf-telco-profile.md).
+> [`cnf-telco-profile.md`](./cnf-telco-profile.md); after `CNF_PROFILE=true make all`,
+> run `make cnf-preflight`, `make cnf-apply`, and `make cnf-verify`.
 
 ## 1. Clone + tools
 

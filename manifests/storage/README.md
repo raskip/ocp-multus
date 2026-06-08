@@ -1,5 +1,7 @@
 # CNF storage: do we need a storage account, and how do workers access it?
 
+Applied automatically by `make cnf-apply`; see [`docs/cnf-telco-profile.md`](../../docs/cnf-telco-profile.md). You can still apply manually as below.
+
 Short answer:
 
 | Need | Storage account? | How the worker reaches it |

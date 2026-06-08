@@ -66,7 +66,7 @@ Windows jump-host credentials into a gitignored bundle. See
 - RHCOS image import from the OpenShift installer release stream.
 - Bootstrap, control-plane, and worker VMs.
 - Optional Multus macvlan and host-device validation manifests.
-- Optional **CNF / telco profile** (`CNF_PROFILE=true`, default OFF): three telco LAN subnets, per-LAN worker NICs with Accelerated Networking, Multus ipvlan NADs, SCTP/THP/sysctl node tuning, RWO/RWX storage classes, an in-cluster registry, and an optional Linux bastion. See [`docs/cnf-telco-profile.md`](./docs/cnf-telco-profile.md).
+- Optional **CNF / telco profile** (`CNF_PROFILE=true`, default OFF): three telco LAN subnets, per-LAN worker NICs with Accelerated Networking, Multus ipvlan NADs, SCTP/THP/sysctl node tuning, RWO/RWX storage classes, an in-cluster registry, and an optional Linux bastion. Enable infrastructure with `CNF_PROFILE=true make all`, then run `make cnf-preflight`, `make cnf-apply`, and `make cnf-verify` for the in-cluster pieces. See [`docs/cnf-telco-profile.md`](./docs/cnf-telco-profile.md).
 
 The default topology is internal: `publish: Internal`. A Windows
 browser/RDP jump host is available as an opt-in convenience
