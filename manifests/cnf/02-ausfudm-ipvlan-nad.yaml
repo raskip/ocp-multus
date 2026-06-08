@@ -1,7 +1,7 @@
 # AUSF-UDM external LAN ipvlan NAD.
-# TODO(Nokia): confirm master (eth2), mode, IPAM, and any static routes the
+# TODO(vendor): confirm master (eth2), mode, IPAM, and any static routes the
 # external LAN needs to reach the signalling peers. Example "routes" block is
-# commented below — uncomment and set Nokia's destinations/gateways.
+# commented below — uncomment and set the vendor's destinations/gateways.
 ---
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition

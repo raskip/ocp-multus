@@ -1,13 +1,13 @@
 # Optional CNF / telco profile
 
-This profile layers a telco CNF topology (e.g. Nokia AUSF/UDM + HSS/HLR) on top
+This profile layers a telco CNF topology (e.g. AUSF/UDM + HSS/HLR) on top
 of the base UPI install. It is **additive, toggle-gated (`CNF_PROFILE` /
 `enable_cnf_lans`), BYO-network compatible, and defaults OFF** — existing users
 see no change. It does not rewrite the base install; it adds dedicated LAN
 subnets, per-LAN worker NICs with Accelerated Networking, Multus ipvlan
 networks, node tuning, storage classes, and an optional bastion.
 
-> **Several manifests ship as templates with `TODO(Nokia)` placeholders.** The
+> **Several manifests ship as templates with `TODO(vendor)` placeholders.** The
 > Terraform spine (subnets + worker NICs) builds against placeholder CIDRs now;
 > the workload/tuning manifests need the vendor's exact values before they route
 > and tune correctly. See the per-directory READMEs.
@@ -58,8 +58,8 @@ workshop questions in the session deliverables.)
    oc apply -f manifests/cnf-platform/          # pool, SA, scoped SCC, PriorityClass
    scripts/label-cnf-nodes.sh vm-worker-0-<cluster> vm-worker-1-<cluster>
    oc get mcp appworker -w                       # wait for the pool to converge
-   oc apply -f manifests/node-tuning/            # SCTP/THP/sysctls (TODO(Nokia))
-   oc apply -f manifests/cnf/                     # ipvlan NADs + example pod (TODO(Nokia))
+   oc apply -f manifests/node-tuning/            # SCTP/THP/sysctls (TODO(vendor))
+   oc apply -f manifests/cnf/                     # ipvlan NADs + example pod (TODO(vendor))
    oc apply -f manifests/storage/                # RWO + RWX StorageClasses
    scripts/configure-image-registry-managed.sh   # registry -> Managed
    ```
@@ -104,7 +104,7 @@ in the NADs.
   deallocation — enable it at build time (the profile does).
 - Node-tuning MachineConfigs roll the `appworker` pool one node at a time.
 
-## TODO(Nokia) — consolidated
+## TODO(vendor) — consolidated
 
 Tracked per directory; the must-have answers are: ipvlan mode + IPAM + routes;
 kernel/sysctl/THP params; pod capabilities + PriorityClass; LAN + external

@@ -1,8 +1,8 @@
 # CNF node tuning (SCTP / THP / sysctls)
 
-> **Status: template, blocked on Nokia values.** These manifests are valid and
+> **Status: template, blocked on vendor values.** These manifests are valid and
 > apply, but the exact kernel parameters, sysctl lists, and THP policy are
-> **placeholders** marked `TODO(Nokia)`. Do not roll them to production nodes
+> **placeholders** marked `TODO(vendor)`. Do not roll them to production nodes
 > until the values are confirmed — each one triggers a **rolling reboot** of the
 > CNF worker pool.
 
@@ -34,7 +34,7 @@ oc apply -f cni-sysctl-allowlist.yaml   # merged content only
 oc get mcp appworker -w
 ```
 
-## TODO(Nokia)
+## TODO(vendor)
 
 - Exact kernel parameters (THP policy, any isolcpus/hugepages via a
   `PerformanceProfile`/`Tuned` if required).

@@ -257,7 +257,7 @@ resource "azapi_resource" "subnet_sriov" {
 }
 
 #-----------------------------------------------------------------------------
-# Optional Nokia CNF / telco LAN subnets (created only when enable_cnf_lans =
+# Optional CNF / telco LAN subnets (created only when enable_cnf_lans =
 # true AND manage_network_resources = true). Same azapi pattern as the subnets
 # above: worker NSG inline + optional route-table attach. Default OFF.
 #-----------------------------------------------------------------------------

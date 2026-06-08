@@ -65,7 +65,7 @@ For option 2 (or ANF) the repo would add a small, default-OFF Terraform block
 (toggle `create_cnf_storage`) that creates the dedicated workload storage account
 + file share + private endpoint + private-DNS A record (reusing the existing PE
 pattern), or the ANF account + delegated subnet. This is **not built yet** — it
-depends on the SMB-vs-NFS-vs-ANF decision (TODO(Nokia)). Until then, BYO the
+depends on the SMB-vs-NFS-vs-ANF decision (TODO(vendor)). Until then, BYO the
 account out-of-band and fill in the StorageClass params.
 
 ## Apply
@@ -78,7 +78,7 @@ oc apply -f 10-sc-azuredisk-rwo.yaml
 oc apply -f 20-sc-azurefile-rwx.yaml   # edit for BYO/NFS first if needed
 ```
 
-## TODO(Nokia)
+## TODO(vendor)
 
 - RWX transport: SMB vs NFS 4.1 vs Azure NetApp Files.
 - Required capacity tier / IOPS / throughput.

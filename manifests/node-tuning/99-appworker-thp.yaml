@@ -1,5 +1,5 @@
 # Transparent Huge Pages policy on the CNF (appworker) pool, via kernel arg.
-# TODO(Nokia): confirm the required value. Common telco choices:
+# TODO(vendor): confirm the required value. Common telco choices:
 #   transparent_hugepage=madvise   (default here)
 #   transparent_hugepage=never
 # Applying this triggers a rolling reboot of the appworker pool only.

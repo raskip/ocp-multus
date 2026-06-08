@@ -1,5 +1,5 @@
 # HSS-HLR external LAN ipvlan NAD.
-# TODO(Nokia): confirm master (eth3), mode, IPAM, and any static routes.
+# TODO(vendor): confirm master (eth3), mode, IPAM, and any static routes.
 ---
 apiVersion: k8s.cni.cncf.io/v1
 kind: NetworkAttachmentDefinition

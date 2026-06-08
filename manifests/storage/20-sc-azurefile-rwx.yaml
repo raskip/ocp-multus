@@ -14,7 +14,7 @@
 #      resourceGroup / server below and prefer NFS (no keys). See the NFS
 #      variant at the bottom.
 #
-# TODO(Nokia): confirm SMB vs NFS, required tier/IOPS, and whether public SA
+# TODO(vendor): confirm SMB vs NFS, required tier/IOPS, and whether public SA
 # creation is allowed or BYO+PE is mandatory.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

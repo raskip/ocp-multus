@@ -1,7 +1,7 @@
 # Scoped SecurityContextConstraints for the CNF workloads.
 # Grants only what ipvlan + SCTP need (NET_ADMIN, NET_RAW) instead of the blanket
 # `privileged` SCC. Bound to the cnf-sa ServiceAccount only.
-# TODO(Nokia): confirm the real capability/host-access requirements — some CNFs
+# TODO(vendor): confirm the real capability/host-access requirements — some CNFs
 # need hostNetwork or additional capabilities; widen deliberately, not by default.
 apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints

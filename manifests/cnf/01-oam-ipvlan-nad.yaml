@@ -1,5 +1,5 @@
 # OAM LAN ipvlan NAD.
-# TODO(Nokia): confirm the following before applying:
+# TODO(vendor): confirm the following before applying:
 #   - master: in-guest NIC for the OAM LAN. With enable_cnf_lans=true the worker
 #     NIC order is eth0=primary, eth1=oam, eth2=ausfudm, eth3=hsshlr (PCI order).
 #     Verify with: oc debug node/<w> -- chroot /host ip -br a   (arm64: enP*).

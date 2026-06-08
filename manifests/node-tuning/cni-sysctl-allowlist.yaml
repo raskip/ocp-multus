@@ -3,13 +3,13 @@
 #
 # IMPORTANT: this ConfigMap is cluster-managed and lives in the openshift-multus
 # namespace. It already ships with a default allowlist. Do NOT blindly replace
-# it — MERGE Nokia's required entries with the existing ones so you don't drop
+# it — MERGE the vendor's required entries with the existing ones so you don't drop
 # defaults. Inspect the current value first:
 #   oc -n openshift-multus get cm cni-sysctl-allowlist -o yaml
 #
 # Entries are anchored regexes; `IFNAME` is the literal placeholder for the
 # interface name (the sysctls are interface-scoped, which is what keeps them
-# safe). TODO(Nokia): replace the list below with the exact required sysctls.
+# safe). TODO(vendor): replace the list below with the exact required sysctls.
 apiVersion: v1
 kind: ConfigMap
 metadata:

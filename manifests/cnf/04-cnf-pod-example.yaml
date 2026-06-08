@@ -1,7 +1,7 @@
 # Example multi-NIC CNF pod: attaches to all three CNF LANs via Multus.
 # The pod gets eth0 (primary pod network) plus three extra interfaces from the
 # NADs listed in the k8s.v1.cni.cncf.io/networks annotation.
-# TODO(Nokia): replace the placeholder image/command with the real CNF workload
+# TODO(vendor): replace the placeholder image/command with the real CNF workload
 # and add the SCTP-using container ports once Phase D (sctp module) is applied.
 ---
 apiVersion: apps/v1

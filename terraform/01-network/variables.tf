@@ -69,7 +69,7 @@ variable "subnet_sriov_cidr" {
 }
 
 #-----------------------------------------------------------------------------
-# Optional Nokia CNF / telco profile (opt-in; default OFF)
+# Optional CNF / telco profile (opt-in; default OFF)
 #
 # When enable_cnf_lans = true, this stack additionally creates three telco LAN
 # subnets (OAM + AUSF-UDM + HSS-HLR) for CNF workloads attached via Multus.

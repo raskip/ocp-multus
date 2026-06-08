@@ -1,8 +1,8 @@
 # CNF platform: pool, roles, SCC, scheduling
 
-> **Status: template, partly blocked on Nokia values.** The pool, ServiceAccount
+> **Status: template, partly blocked on vendor values.** The pool, ServiceAccount
 > and labelling are ready; the SCC capabilities and the PriorityClass value are
-> `TODO(Nokia)`.
+> `TODO(vendor)`.
 
 This sets up the dedicated CNF worker pool that the node-tuning
 ([`../node-tuning/`](../node-tuning/)) and workload ([`../cnf/`](../cnf/))
@@ -35,7 +35,7 @@ oc get mcp appworker -w
 # 4. Now apply ../node-tuning/ and ../cnf/.
 ```
 
-## TODO(Nokia)
+## TODO(vendor)
 
 - SCC: real capability / host-network / host-port requirements (widen only as
   needed; the scoped SCC avoids blanket `privileged`).

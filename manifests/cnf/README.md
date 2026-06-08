@@ -3,8 +3,8 @@
 > **Status: template.** The NADs in this directory ship with **placeholder**
 > CIDRs, ipvlan `mode`, IPAM ranges, and `master` interfaces. They are valid
 > YAML and apply cleanly, but the values **must be replaced with the ones the
-> CNF vendor (Nokia) provides** before the workloads will route correctly. Every
-> placeholder is marked `TODO(Nokia)` in the file header.
+> CNF vendor provides** before the workloads will route correctly. Every
+> placeholder is marked `TODO(vendor)` in the file header.
 
 This is the CNF (telco) counterpart to [`manifests/multus/`](../multus/). It
 attaches CNF pods to the three dedicated LAN subnets created by the
@@ -45,7 +45,7 @@ oc -n cnf rollout status deploy/cnf-example --timeout=5m
 oc -n cnf exec deploy/cnf-example -- ip -br a
 ```
 
-## TODO(Nokia) before production
+## TODO(vendor) before production
 
 - ipvlan `mode` per LAN: `l2` / `l3` / `l3s`.
 - IPAM: `whereabouts` ranges/gateways (inside the LAN CIDRs, not overlapping

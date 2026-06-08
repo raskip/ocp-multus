@@ -3,7 +3,7 @@
 # targets only the `appworker` MachineConfigPool, so the rest of the cluster is
 # unaffected. Pods must still request these sysctls in their securityContext.
 #
-# TODO(Nokia): replace the example below with the exact unsafe sysctls the CNFs
+# TODO(vendor): replace the example below with the exact unsafe sysctls the CNFs
 # require (e.g. net.ipv4.tcp_* / net.core.* tuning). Applying this rolls the
 # appworker pool.
 apiVersion: machineconfiguration.openshift.io/v1
