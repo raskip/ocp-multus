@@ -33,14 +33,17 @@ Runnable example scripts are in
 | 9 | NSG for worker subnet | yes | Section 3. |
 | 10 | Route table for egress (UDR) | yes (hub-spoke + FW egress) | Section 4. |
 | 11 | VNet peering to hub (if applicable) | yes (hub-spoke) | Both directions, `allowForwardedTraffic = true`. |
-| 12 | Private DNS zone `privatelink.blob.core.windows.net` | yes | Linked to the cluster VNet. Often centrally managed in a hub DNS RG. |
+| 12 | Private DNS zone `privatelink.blob.core.windows.net` | yes | Linked to the cluster VNet. Often centrally managed in a hub DNS RG. With the default `MANAGE_STORAGE_PRIVATE_ENDPOINT=false`, the customer's platform team also provisions the storage Private Endpoint and its A-record/VNet link here (see below). |
 | 13 | Parent DNS zone for cluster API/apps | yes | Section 5. |
 
 The cluster installer creates:
 - Internal LBs `lb-api-internal-<cluster>` and `lb-ingress-internal-<cluster>`
 - Private DNS zone `<cluster_name>.<base_domain>` (e.g. `lab.ocp.example.com`)
 - Private DNS records `api`, `api-int`, `*.apps` inside that zone
-- Storage Private Endpoint for the bootstrap/RHCOS storage account
+- Storage Private Endpoint for the bootstrap/RHCOS storage account —
+  **only when `MANAGE_STORAGE_PRIVATE_ENDPOINT=true`**. With the default
+  (`false`), the customer provisions the Private Endpoint and its DNS
+  centrally/manually (see the storage-account DNS note in section 5).
 - Uploader VM (Linux) and, only if `CREATE_WINDOWS_JUMP=true`, an
   optional Windows browser/RDP jump VM in the bootstrap subnet
 
@@ -205,8 +208,30 @@ Customer hand-off sentence:
   after `make wait-install` converts the default IngressController to
   HostNetwork.
 - **`privatelink.blob.core.windows.net` private DNS zone**:
-  pre-exists, linked to the cluster spoke VNet. The installer adds an
-  A-record for the storage Private Endpoint to this zone.
+  pre-exists, linked to the cluster spoke VNet.
+  - **Default (`MANAGE_STORAGE_PRIVATE_ENDPOINT=false`, centralized):** the
+    customer's platform team provisions the storage **Private Endpoint** and
+    registers its A-record (and the VNet-to-zone link) in this zone —
+    typically via Azure Policy auto-registration. The repo creates none of
+    these (the resources are absent from Terraform state entirely), so the
+    blob endpoint must already resolve before the uploader VM runs.
+  - **Self-managed (`MANAGE_STORAGE_PRIVATE_ENDPOINT=true`):** the installer
+    creates the storage Private Endpoint, adds its A-record to this zone, and
+    links the cluster VNet to it. Requires `PRIVATE_DNS_SUBSCRIPTION_ID` and
+    `HUB_DNS_RESOURCE_GROUP` to point at the hub zone.
+
+  > **Migrating an existing self-managed install to centralized.** Because the
+  > Private Endpoint, A-record, and VNet link are already tracked in Terraform
+  > state, simply setting `MANAGE_STORAGE_PRIVATE_ENDPOINT=false` will plan to
+  > **destroy** them. To hand them over to the central team without deleting
+  > the live resources, remove them from state first:
+  >
+  > ```bash
+  > terraform -chdir=terraform/01-network state rm \
+  >   'azurerm_private_endpoint.storage_blob[0]' \
+  >   'azurerm_private_dns_a_record.blob_pe[0]' \
+  >   'azurerm_private_dns_zone_virtual_network_link.blob_hub[0]'
+  > ```
 
 If you operate `Internal` ingress (`publish: Internal` in
 `install-config.yaml`), on-prem clients reach the cluster API and apps

@@ -145,6 +145,25 @@ variable "manage_network_resources" {
   default     = true
 }
 
+# Storage-account DNS / Private Endpoint ownership.
+#
+# When false (default), this stack does NOT create the storage blob Private
+# Endpoint, its A-record in privatelink.blob.core.windows.net, or the VNet-to-
+# hub-zone link. The customer's platform team provisions and DNS-registers the
+# Private Endpoint centrally/manually (e.g. via Azure Policy auto-registration).
+# Because count = 0, these resources are absent from Terraform state entirely:
+# Terraform does not refresh, read, or diff them.
+#
+# When true, this stack manages all three resources itself (the original
+# self-managed behavior). Existing self-managed installs must set this to true
+# to avoid a destroy plan, or run `terraform state rm` to hand the live
+# resources over to the central team without deleting them.
+variable "manage_storage_private_endpoint" {
+  description = "When false (default), the storage blob Private Endpoint, its privatelink.blob A-record, and the hub VNet link are provisioned centrally/manually by the customer and this stack does not create them. Set to true to have this stack manage them (legacy self-managed behavior)."
+  type        = bool
+  default     = false
+}
+
 variable "subnet_master_id" {
   description = "BYO-network only: full Resource ID of the pre-existing master subnet. Required when manage_network_resources = false."
   type        = string

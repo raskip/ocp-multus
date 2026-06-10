@@ -540,9 +540,16 @@ resource "azurerm_private_dns_a_record" "apps" {
 
 #-----------------------------------------------------------------------------
 # Storage account private endpoint (account lives in workload RG from 00-prereqs)
-# DNS is registered in the centralized hub zone; no local private DNS zone.
+#
+# Gated by manage_storage_private_endpoint:
+#   false (default) -> the customer's platform team provisions the Private
+#                      Endpoint and its DNS centrally/manually; this stack
+#                      creates nothing here (count = 0, absent from state).
+#   true            -> this stack creates the Private Endpoint, the A-record in
+#                      the centralized hub zone, and the VNet-to-hub-zone link.
 #-----------------------------------------------------------------------------
 resource "azurerm_private_endpoint" "storage_blob" {
+  count               = var.manage_storage_private_endpoint ? 1 : 0
   name                = "pe-${local.storage_account_name}-blob"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.workload.name
@@ -558,16 +565,18 @@ resource "azurerm_private_endpoint" "storage_blob" {
 }
 
 resource "azurerm_private_dns_a_record" "blob_pe" {
+  count               = var.manage_storage_private_endpoint ? 1 : 0
   provider            = azurerm.private_dns
   name                = local.storage_account_name
   zone_name           = "privatelink.blob.core.windows.net"
   resource_group_name = var.hub_dns_resource_group
   ttl                 = 30
-  records             = [azurerm_private_endpoint.storage_blob.private_service_connection[0].private_ip_address]
+  records             = [azurerm_private_endpoint.storage_blob[0].private_service_connection[0].private_ip_address]
   tags                = var.tags
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "blob_hub" {
+  count                 = var.manage_storage_private_endpoint ? 1 : 0
   provider              = azurerm.private_dns
   name                  = "vnetlink-${var.vnet_name}-blob"
   resource_group_name   = var.hub_dns_resource_group

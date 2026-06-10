@@ -87,6 +87,12 @@ require ARCHITECTURE
 : "${SUBNET_AUSFUDM_CIDR:=10.20.5.0/26}"
 : "${SUBNET_HSSHLR_CIDR:=10.20.6.0/26}"
 
+# Storage-account DNS / Private Endpoint ownership (default OFF = centralized).
+# When false, the storage blob Private Endpoint and its privatelink.blob DNS are
+# provisioned centrally/manually by the customer and 01-network does not create
+# them. Set true to have the repo manage them (legacy self-managed behavior).
+: "${MANAGE_STORAGE_PRIVATE_ENDPOINT:=false}"
+
 # Default to attaching the cluster route table to the master/bootstrap/multus
 # subnets in addition to worker (worker is always attached). This is the right
 # default for hub-spoke + firewall-egress topologies, which is the recommended
@@ -197,6 +203,7 @@ subnet_oam_cidr              = $(hcl_str "$SUBNET_OAM_CIDR")
 subnet_ausfudm_cidr          = $(hcl_str "$SUBNET_AUSFUDM_CIDR")
 subnet_hsshlr_cidr           = $(hcl_str "$SUBNET_HSSHLR_CIDR")
 attach_route_table_to_extra_subnets = $(hcl_string_list "$ATTACH_RT_EXTRA_SUBNETS")
+manage_storage_private_endpoint = $MANAGE_STORAGE_PRIVATE_ENDPOINT
 EOF
 )"
 

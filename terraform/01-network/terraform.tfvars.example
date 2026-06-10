@@ -1,6 +1,11 @@
 cluster_subscription_id       = "00000000-0000-0000-0000-000000000000"
 private_dns_subscription_id   = "22222222-2222-2222-2222-222222222222"
 hub_dns_resource_group        = "rg-private-dns-example"
+# Storage blob Private Endpoint + DNS ownership. Default false = the customer's
+# platform team provisions the Private Endpoint, the privatelink.blob A-record,
+# and the hub VNet link centrally/manually. Set true for the legacy self-managed
+# behavior (repo creates them; requires private_dns_subscription_id + hub_dns_resource_group).
+manage_storage_private_endpoint = false
 location                      = "northeurope"
 cluster_name                  = "lab"
 infra_id                      = "lab-xxxxx"
