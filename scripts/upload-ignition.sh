@@ -80,13 +80,12 @@ EXPIRY='${EXPIRY}'
 base64 -d /tmp/bootstrap.ign.b64 > /tmp/bootstrap.ign
 rm -f /tmp/bootstrap.ign.b64
 az login --identity --allow-no-subscriptions --only-show-errors >/dev/null
-az storage blob upload \\
-  --account-name "\$SA" --container-name "\$CONT" --name bootstrap.ign \\
-  --file /tmp/bootstrap.ign --auth-mode login --overwrite --only-show-errors >/dev/null
-SAS=\$(az storage blob generate-sas \\
-  --account-name "\$SA" --container-name "\$CONT" --name bootstrap.ign \\
-  --permissions r --expiry "\$EXPIRY" --https-only \\
-  --auth-mode login --as-user -o tsv --only-show-errors)
+# Keep each az invocation on a single line: the storage account has
+# shared_access_key_enabled=false, so if --auth-mode login / --as-user are ever
+# dropped (e.g. a broken \\ line-continuation) az falls back to the account-key
+# path and fails with "Authorization with Shared Key is disabled".
+az storage blob upload --account-name "\$SA" --container-name "\$CONT" --name bootstrap.ign --file /tmp/bootstrap.ign --auth-mode login --overwrite --only-show-errors >/dev/null
+SAS=\$(az storage blob generate-sas --account-name "\$SA" --container-name "\$CONT" --name bootstrap.ign --permissions r --expiry "\$EXPIRY" --https-only --auth-mode login --as-user -o tsv --only-show-errors)
 echo "SAS_BEGIN"; echo "\$SAS"; echo "SAS_END"
 BASH_INNER
 EOS
