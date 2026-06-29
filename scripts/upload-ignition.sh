@@ -92,7 +92,7 @@ EOS
 )
 
 OUT=$(run_remote "$FINAL")
-SAS=$(echo "$OUT" | awk '/^SAS_BEGIN$/{flag=1;next}/^SAS_END$/{flag=0}flag' | tr -d '[:space:]')
+SAS=$(echo "$OUT" | tr -d '\r' | awk '/SAS_BEGIN/{f=1;next}/SAS_END/{f=0}f' | tr -d '[:space:]')
 [[ -n "$SAS" ]] || { echo "Failed to obtain SAS. Output was:"; echo "$OUT"; exit 1; }
 
 BLOB_URL="https://${SA_NAME}.blob.core.windows.net/${CONTAINER}/bootstrap.ign?${SAS}"
