@@ -1,0 +1,53 @@
+# Example dual-NIC pods — one pinned to each worker node.
+#
+# Each pod gets:
+#   eth0  -> default pod network (OVN-Kubernetes): in-cluster + OpenShift ingress
+#   net1  -> the host-device NIC from the matching NAD: externally / cross-node
+#            routable over the Azure VNet
+#
+# The `k8s.v1.cni.cncf.io/networks` annotation is how you attach the secondary
+# interface. To attach MORE interfaces, list more NADs comma-separated, e.g.:
+#   k8s.v1.cni.cncf.io/networks: hostdev-a,other-nad
+#
+# `nodeName` pins each pod to the node whose Azure-assigned IP its NAD uses.
+# (host-device is one pod per NIC per node, so a Deployment with replicas would
+# fight over the same NIC — use explicit per-node pods for this pattern.)
+#
+# TODO before applying:
+#   - nodeName: set to your two worker node names
+#       oc get nodes -l node-role.kubernetes.io/worker
+#   - replace the placeholder image/command with your real workload if desired.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostdev-a
+  namespace: hostdev-xnode-demo
+  annotations:
+    k8s.v1.cni.cncf.io/networks: hostdev-a
+spec:
+  nodeName: REPLACE-WITH-WORKER-A
+  containers:
+    - name: shell
+      image: registry.access.redhat.com/ubi9/ubi:latest
+      command: ["/bin/bash", "-c", "sleep infinity"]
+      securityContext:
+        capabilities:
+          add: ["NET_RAW", "NET_ADMIN"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostdev-b
+  namespace: hostdev-xnode-demo
+  annotations:
+    k8s.v1.cni.cncf.io/networks: hostdev-b
+spec:
+  nodeName: REPLACE-WITH-WORKER-B
+  containers:
+    - name: shell
+      image: registry.access.redhat.com/ubi9/ubi:latest
+      command: ["/bin/bash", "-c", "sleep infinity"]
+      securityContext:
+        capabilities:
+          add: ["NET_RAW", "NET_ADMIN"]

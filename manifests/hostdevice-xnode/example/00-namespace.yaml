@@ -1,0 +1,15 @@
+# Namespace for the host-device demo pods.
+#
+# The privileged Pod Security labels are required: the host-device CNI moves a
+# real host NIC into the pod network namespace and the pod needs NET_ADMIN /
+# NET_RAW, which the default "restricted" profile forbids on OpenShift 4.14+.
+# Keep these labels if you copy this into your own namespace.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hostdev-xnode-demo
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged

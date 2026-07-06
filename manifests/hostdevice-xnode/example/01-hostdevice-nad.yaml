@@ -1,0 +1,62 @@
+# host-device NetworkAttachmentDefinition — one per worker node.
+#
+# host-device moves an ENTIRE real NIC into the pod's network namespace. On
+# Azure that NIC keeps its Azure-registered MAC and must use its Azure-assigned
+# IP, so the SDN routes it natively (cross-node + external). This is why
+# host-device works where macvlan does not.
+#
+# You need ONE NAD per node, because the static IP differs per node (each
+# worker's eth1 has its own Azure-assigned address). The pod that lands on
+# node A references the node-A NAD, etc. (run-demo.sh generates these two NADs
+# automatically by reading each node's live eth1 IP.)
+#
+# TODO before applying:
+#   - device: the in-guest name of the Multus-subnet NIC. Usually "eth1"
+#     (arm64 uses "enP*"). Verify:
+#       oc debug node/<worker> -- chroot /host ip -br a
+#   - addresses[0].address: the Azure-assigned IP/prefix of THAT NIC on THAT
+#     node. Read it live (do NOT invent one):
+#       oc debug node/<worker> -- chroot /host ip -4 -br addr show eth1
+#     The placeholder below uses the repo's default Multus range 10.20.2.0/23.
+#   - gateway: optional; set to the subnet gateway only if you need external
+#     egress from the secondary interface. Omit for pod-to-pod cross-node.
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: hostdev-a
+  namespace: hostdev-xnode-demo
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "hostdev-a",
+      "type": "host-device",
+      "device": "eth1",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          { "address": "10.20.2.10/23" }
+        ]
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: hostdev-b
+  namespace: hostdev-xnode-demo
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "hostdev-b",
+      "type": "host-device",
+      "device": "eth1",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          { "address": "10.20.2.11/23" }
+        ]
+      }
+    }

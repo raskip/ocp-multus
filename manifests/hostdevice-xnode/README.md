@@ -41,7 +41,31 @@ pod hostdev-a (worker A)                 pod hostdev-b (worker B)
     | xargs -I{} oc debug {} -- chroot /host ip -br a
   ```
 
-## Run
+## Reference manifests (read these to see the shape)
+
+If you prefer to see/apply the YAML directly instead of the script, the
+[`example/`](./example/) directory has annotated reference manifests:
+
+| File | What it shows |
+|------|---------------|
+| [`example/00-namespace.yaml`](./example/00-namespace.yaml) | Namespace with the required privileged Pod Security labels. |
+| [`example/01-hostdevice-nad.yaml`](./example/01-hostdevice-nad.yaml) | Two host-device NADs (one per node). Each pins `device: eth1` and a static IP = that node's Azure-assigned NIC IP. |
+| [`example/02-dualnic-pod.yaml`](./example/02-dualnic-pod.yaml) | Two dual-NIC pods (`eth0` + `net1`), one pinned to each worker via `nodeName`, attaching the secondary interface through the `k8s.v1.cni.cncf.io/networks` annotation. |
+
+These carry **placeholder** IPs / node names (see the `TODO` comments) — replace
+them with your live values, then:
+
+```bash
+oc apply -f manifests/hostdevice-xnode/example/00-namespace.yaml
+oc apply -f manifests/hostdevice-xnode/example/01-hostdevice-nad.yaml
+oc apply -f manifests/hostdevice-xnode/example/02-dualnic-pod.yaml
+```
+
+The **key line** for attaching extra interfaces is the pod annotation
+`k8s.v1.cni.cncf.io/networks: <nad-name>` — add more NADs comma-separated to
+attach more interfaces.
+
+## Run (automated)
 
 ```bash
 ./manifests/hostdevice-xnode/run-demo.sh
