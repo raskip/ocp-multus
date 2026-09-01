@@ -23,6 +23,22 @@ OC="${OC:-oc}"
 NS="${NS:-hostdev-xnode-demo}"
 DEV="${DEV:-eth1}"   # in-guest name of the Multus-subnet NIC (arm64: enP*; verify below)
 GW="${GW:-}"         # optional gateway for external egress test; empty = skip gateway
+TARGETS="${TARGETS:-}" # optional space-separated Azure/on-prem IPs tested via net1
+KEEP_ON_FAILURE="${KEEP_ON_FAILURE:-0}"
+CREATED_NS=0
+SUCCESS=0
+
+cleanup() {
+  local rc=$?
+  if [[ $SUCCESS -eq 0 && "$KEEP_ON_FAILURE" != "1" && $CREATED_NS -eq 1 ]]; then
+    echo "==> failed; deleting namespace $NS to return host-device NICs to the nodes" >&2
+    "$OC" delete ns "$NS" --wait=true --timeout=180s >/dev/null 2>&1 || true
+  elif [[ $SUCCESS -eq 0 && "$KEEP_ON_FAILURE" == "1" ]]; then
+    echo "==> failed; KEEP_ON_FAILURE=1 leaves namespace $NS for investigation" >&2
+  fi
+  exit "$rc"
+}
+trap cleanup EXIT
 
 # Pick the two worker nodes (override with NODE_A / NODE_B if needed).
 if [[ -z "${NODE_A:-}" || -z "${NODE_B:-}" ]]; then
@@ -37,21 +53,33 @@ fi
 
 echo "==> workers: A=$NODE_A  B=$NODE_B  (dev=$DEV)"
 
+if "$OC" get ns "$NS" >/dev/null 2>&1; then
+  echo "ERROR: namespace $NS already exists."
+  echo "       Delete it first or choose another namespace with NS=<name>."
+  exit 1
+fi
+CREATED_NS=1
+
 # Read the CIDR (ip/prefix) of $DEV on a node via oc debug.
 get_cidr() {
   "$OC" debug "node/$1" -- chroot /host ip -4 -o addr show "$DEV" 2>/dev/null \
     | grep -oE 'inet [0-9.]+/[0-9]+' | awk '{print $2}' | head -1
 }
-CIDR_A="$(get_cidr "$NODE_A")"; CIDR_B="$(get_cidr "$NODE_B")"
+CIDR_A="$(get_cidr "$NODE_A" || true)"; CIDR_B="$(get_cidr "$NODE_B" || true)"
 [[ -n "$CIDR_A" && -n "$CIDR_B" ]] || {
   echo "ERROR: could not read $DEV address (A='$CIDR_A' B='$CIDR_B')."
   echo "       Confirm the in-guest NIC name: oc debug node/<w> -- chroot /host ip -br a"; exit 1; }
+IP_A="${CIDR_A%/*}"
 IP_B="${CIDR_B%/*}"
 echo "    A $DEV = $CIDR_A"
 echo "    B $DEV = $CIDR_B"
 
 # Build the optional gateway fragment.
-gw_frag() { [[ -n "$GW" ]] && printf ',"gateway":"%s"' "$GW" || true; }
+gw_frag() {
+  if [[ -n "$GW" ]]; then
+    printf ',"gateway":"%s"' "$GW"
+  fi
+}
 
 echo "==> applying namespace + host-device NADs + pods"
 cat <<EOF | "$OC" apply -f -
@@ -118,15 +146,39 @@ echo "==> waiting for pods"
 
 echo "==> interfaces on hostdev-a (expect eth0 + net1=$CIDR_A)"
 "$OC" -n "$NS" exec hostdev-a -- ip -br a
+echo "==> interfaces on hostdev-b (expect eth0 + net1=$CIDR_B)"
+"$OC" -n "$NS" exec hostdev-b -- ip -br a
 
-echo "==> CROSS-NODE ping: hostdev-a ($CIDR_A) -> hostdev-b ($IP_B)"
+POD_IP_A="$("$OC" -n "$NS" get pod hostdev-a -o jsonpath='{.status.podIP}')"
+POD_IP_B="$("$OC" -n "$NS" get pod hostdev-b -o jsonpath='{.status.podIP}')"
+
+echo "==> DEFAULT NETWORK cross-node ping: hostdev-a ($POD_IP_A) -> hostdev-b ($POD_IP_B)"
+"$OC" -n "$NS" exec hostdev-a -- ping -c4 "$POD_IP_B"
+echo "==> DEFAULT NETWORK reverse ping: hostdev-b ($POD_IP_B) -> hostdev-a ($POD_IP_A)"
+"$OC" -n "$NS" exec hostdev-b -- ping -c4 "$POD_IP_A"
+
+echo "==> SECONDARY NETWORK cross-node ping: hostdev-a ($CIDR_A) -> hostdev-b ($IP_B)"
 "$OC" -n "$NS" exec hostdev-a -- ping -c4 "$IP_B"
+echo "==> SECONDARY NETWORK reverse ping: hostdev-b ($CIDR_B) -> hostdev-a ($IP_A)"
+"$OC" -n "$NS" exec hostdev-b -- ping -c4 "$IP_A"
 
 if [[ -n "$GW" ]]; then
-  echo "==> external egress test via net1 gateway $GW (optional; may be NSG-blocked)"
-  "$OC" -n "$NS" exec hostdev-a -- ping -c2 "$GW" || echo "   (gateway ping optional)"
+  echo "==> gateway test through net1: $GW"
+  "$OC" -n "$NS" exec hostdev-a -- ping -I net1 -c4 "$GW"
+  "$OC" -n "$NS" exec hostdev-b -- ping -I net1 -c4 "$GW"
 fi
 
+read -r -a TARGET_LIST <<< "$TARGETS"
+for target in "${TARGET_LIST[@]}"; do
+  echo "==> external target through net1: $target"
+  "$OC" -n "$NS" exec hostdev-a -- ip route get "$target"
+  "$OC" -n "$NS" exec hostdev-a -- ping -I net1 -c4 "$target"
+  "$OC" -n "$NS" exec hostdev-b -- ip route get "$target"
+  "$OC" -n "$NS" exec hostdev-b -- ping -I net1 -c4 "$target"
+done
+
 echo
-echo "SUCCESS if the cross-node ping above replied."
+echo "SUCCESS: default and secondary cross-node checks passed."
+[[ -n "$TARGETS" ]] && echo "External net1 targets passed: $TARGETS"
 echo "Cleanup:  $OC delete ns $NS"
+SUCCESS=1

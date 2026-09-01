@@ -23,7 +23,7 @@ export
         etcd-backup cluster-shutdown cluster-shutdown-fast cluster-startup \
         workers-down workers-up cluster-status \
         ingress-hostnetwork image-registry-removed install-hooks sanitize \
-        cnf-preflight cnf-apply cnf-verify
+        cnf-preflight cnf-apply cnf-verify routing-discovery
 
 help:
 	@awk '/^[a-zA-Z_-]+:/ {print $$1}' $(MAKEFILE_LIST) | sed 's/://' | sort -u
@@ -244,6 +244,15 @@ save-credentials:   ; bash scripts/save-credentials.sh $(if $(strip $(CREDENTIAL
 cnf-preflight:      ; bash scripts/cnf-preflight.sh
 cnf-apply:          ; bash scripts/cnf-apply.sh
 cnf-verify:         ; bash scripts/cnf-verify.sh
+
+# ---- Routed secondary-network / BGP discovery ----------------------------
+# Read-only inventory used before selecting or rebuilding for a routed Multus
+# or experimental CUDN + Azure Route Server design.
+#   make routing-discovery
+#   make routing-discovery ROUTING_DISCOVERY_FLAGS="--out /tmp/routing.txt"
+#   make routing-discovery ROUTING_DISCOVERY_FLAGS="--skip-effective-routes"
+ROUTING_DISCOVERY_FLAGS ?=
+routing-discovery:   ; bash scripts/routing-discovery.sh $(ROUTING_DISCOVERY_FLAGS)
 
 # ---- Post-install workarounds for restricted tenants (see docs/) ----
 # Patch the default IngressController to HostNetwork. Use when this repo's

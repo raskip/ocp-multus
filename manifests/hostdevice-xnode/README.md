@@ -74,7 +74,8 @@ attach more interfaces.
 The script auto-discovers the two worker nodes and each node's `eth1` IP,
 generates the namespace + two host-device NADs (static IPAM pinned to each
 node's Azure-assigned IP) + two pods (one per node), waits, and runs the
-cross-node ping. **Success = the ping replies.**
+default-network and host-device cross-node pings in both directions.
+**Success = all four pings reply.**
 
 ### Options (environment variables)
 
@@ -84,13 +85,28 @@ cross-node ping. **Success = the ping replies.**
 | `NS` | `hostdev-xnode-demo` | Demo namespace. |
 | `DEV` | `eth1` | In-guest name of the Multus-subnet NIC (arm64: `enP*`). |
 | `NODE_A`, `NODE_B` | first two workers | Pin specific worker nodes. |
-| `GW` | *(empty)* | Optional gateway for an external-egress ping. |
+| `GW` | *(empty)* | Optional gateway tested from both pods through `net1`. |
+| `TARGETS` | *(empty)* | Space-separated Azure/on-prem IPs tested from both pods through `net1`. |
+| `KEEP_ON_FAILURE` | `0` | Set to `1` to retain failed resources for investigation. |
 
 Example:
 
 ```bash
-OC=./oc DEV=eth1 GW=10.0.0.1 ./manifests/hostdevice-xnode/run-demo.sh
+OC=./oc DEV=eth1 GW=10.0.0.1 \
+  TARGETS="192.0.2.10 198.51.100.20" \
+  ./manifests/hostdevice-xnode/run-demo.sh
 ```
+
+Use IP addresses for `TARGETS` so a secondary-routing failure is not confused
+with DNS behavior. The script prints `ip route get` before each target ping.
+
+On failure, a namespace created by the script is deleted automatically so the
+moved NICs return to their nodes. The script refuses to reuse an existing
+namespace to avoid deleting unrelated resources during failure cleanup.
+
+Inbound validation is performed from the Azure/on-premises test host: initiate
+traffic to both secondary pod addresses printed by the script. Outbound success
+alone does not prove that the return prefix is propagated.
 
 ## Why static IPAM must equal the Azure-assigned IP
 

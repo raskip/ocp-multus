@@ -258,7 +258,48 @@ Peering connection state must be `Connected` on both legs.
 
 ---
 
-## 7. Validation
+## 7. Dynamic routes for secondary pod networks
+
+If secondary pod addresses must be reachable from peered VNets or on-premises,
+do not assume that attaching the Multus subnet's UDR is sufficient. The
+external routing domain must have a route back to the actual pod secondary
+prefix and a next hop that can forward into the pod interface.
+
+Before using Azure Route Server, Azure Virtual WAN hub BGP peering, or another
+BGP design, the network team must provide:
+
+- an approved pod prefix that does not overlap this VNet, peered VNets,
+  OpenShift cluster/service networks, or on-premises routes;
+- the Route Server or routing-appliance resource owner;
+- BGP peer IPs and ASNs;
+- confirmation that TCP/179 is allowed between peers;
+- confirmation that the learned prefix propagates through ExpressRoute/VPN;
+- an on-premises return-route acceptance and test owner;
+- failure and withdrawal expectations.
+
+Azure same-VNet system routes take precedence over Route Server-learned BGP
+routes. Do not allocate a dynamically advertised pod prefix from inside the
+VNet address space and expect BGP to override that system route.
+
+If this VNet is connected to an Azure Virtual WAN hub, Azure Route Server
+cannot be deployed in the spoke. Use the virtual hub's BGP peering feature with
+an approved BGP endpoint in the directly connected VNet. The network team must
+also confirm branch-to-branch routing, route-table association/propagation, hub
+routing intent when the hub is secured, both hub peer addresses, and the
+Virtual WAN peer/route limits.
+
+OpenShift `RouteAdvertisements` is not a generic export mechanism for Multus
+macvlan, ipvlan, host-device, or SR-IOV NAD addresses. See
+[`routed-secondary-networking.md`](./routed-secondary-networking.md) for the
+current feature/support matrix and the required discovery command:
+
+```bash
+make routing-discovery
+```
+
+---
+
+## 8. Validation
 
 Before handing off to the OpenShift install team, verify:
 
